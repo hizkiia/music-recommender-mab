@@ -37,7 +37,9 @@
         axios.post('http://localhost:5000/login', {
           username: this.username,
           password: this.password
-        }).then(response => {
+        }, {
+  withCredentials: true
+}).then(response => {
           if (response.status === 200) {
             this.$router.push('/recommend');
           }

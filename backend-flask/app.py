@@ -10,105 +10,160 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-CORS(app, supports_credentials=True)
+
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+
 
 # MySQL configurations
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'user_feedback'
+app.config['MYSQL_DB'] = 'music_recommendation'
 
 mysql = MySQL(app)
 bcrypt = Bcrypt(app)
+def load_songs_from_db():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM songs')
+    result = cursor.fetchall()
+    df = pd.DataFrame(result)
 
-# Load dataset high popularity
-high_popularity_df = pd.read_csv('high_popularity_spotify_data.csv')
+    # Pilih fitur numerik
+    features = ['energy', 'tempo', 'danceability', 'loudness', 'valence',
+                'speechiness', 'instrumentalness', 'acousticness', 'key', 'duration_ms']
+    
+    # Paksa fitur jadi numerik (jika ada yang string)
+    df[features] = df[features].apply(pd.to_numeric, errors='coerce')
 
-# Load dataset low popularity
-low_popularity_df = pd.read_csv('low_popularity_spotify_data.csv')
+    # Hilangkan yang tidak bisa dikonversi (NaN hasil coercion)
+    df.dropna(subset=features, inplace=True)
 
-# Menggabungkan kedua dataset
-spotify_df = pd.concat([high_popularity_df, low_popularity_df], ignore_index=True)
+    # Normalisasi
+    scaler = StandardScaler()
+    df[features] = scaler.fit_transform(df[features])
 
-# Pilih fitur numerik untuk cosine similarity
-features = ['energy', 'tempo', 'danceability', 'loudness', 'valence', 'speechiness', 'instrumentalness', 'acousticness', 'key', 'duration_ms']
-scaler = StandardScaler()
-spotify_df[features] = scaler.fit_transform(spotify_df[features])
+    df.drop_duplicates(inplace=True)
+    return df, features
 
-spotify_df.dropna(inplace=True)
-spotify_df.drop_duplicates(inplace=True)
+# Load data saat app dijalankan
+with app.app_context():
+    spotify_df, features = load_songs_from_db()
 
-def find_similar_songs(song_names, top_n=30):
+
+# # Load dataset high popularity
+# high_popularity_df = pd.read_csv('high_popularity_spotify_data.csv')
+
+# # Load dataset low popularity
+# low_popularity_df = pd.read_csv('low_popularity_spotify_data.csv')
+
+# # Menggabungkan kedua dataset
+# spotify_df = pd.concat([high_popularity_df, low_popularity_df], ignore_index=True)
+
+# # Pilih fitur numerik untuk cosine similarity
+# features = ['energy', 'tempo', 'danceability', 'loudness', 'valence', 'speechiness', 'instrumentalness', 'acousticness', 'key', 'duration_ms']
+# scaler = StandardScaler()
+# spotify_df[features] = scaler.fit_transform(spotify_df[features])
+
+# spotify_df.dropna(inplace=True)
+# spotify_df.drop_duplicates(inplace=True)
+
+def find_similar_songs(song_ids, top_n=50):
     song_vectors = []
-    for song_name in song_names:
-        if song_name not in spotify_df['track_name'].values:
+    
+    # Use song_ids instead of song_names to find similar songs
+    for song_id in song_ids:
+        matches = spotify_df[spotify_df['song_id'] == song_id]  # Match by song_id, not song_name
+        if matches.empty:
             continue
-        song_idx = spotify_df.index[spotify_df['track_name'] == song_name][0]
-        song_vector = spotify_df.loc[song_idx, features].values
+        song_vector = matches.iloc[0][features].values
         song_vectors.append(song_vector)
 
     if not song_vectors:
         return None
-    
+
+    # Calculate the average vector of the selected songs
     avg_vector = np.mean(song_vectors, axis=0).reshape(1, -1)
     similarity_scores = cosine_similarity(avg_vector, spotify_df[features])[0]
-    sorted_indices = np.argsort(similarity_scores)[::-1]
-    
-    similar_songs = spotify_df.iloc[sorted_indices][['track_name', 'track_artist', 'uri']].copy()
-    similar_songs['similarity'] = similarity_scores[sorted_indices]
-    similar_songs = similar_songs[~similar_songs['track_name'].isin(song_names)]
-    
-    return similar_songs.head(top_n)
+    spotify_df['similarity'] = similarity_scores
+
+    # Sort by similarity and exclude the songs already in the song_ids list
+    similar_songs = spotify_df.copy()
+    similar_songs = similar_songs[~similar_songs['song_id'].isin(song_ids)]  # Exclude selected songs
+    similar_songs = similar_songs.sort_values(by='similarity', ascending=False)
+
+    # Return the top_n similar songs based on the highest similarity
+    return similar_songs[['song_id', 'track_name', 'track_artist', 'uri', 'similarity']].head(top_n)
 
 class EpsilonGreedyRecommender:
-    def __init__(self, songs, epsilon=0.1):
+    def __init__(self, songs, epsilon=0.2):
         self.songs = songs
         self.epsilon = epsilon
-        self.similarities = {song: songs[songs['track_name'] == song]['similarity'].values[0] for song in songs['track_name']}
-    
+        # Inisialisasi rewards berdasarkan song_id
+        self.rewards = {song['song_id']: song['similarity'] for _, song in self.songs.iterrows()}
+        self.likes = {song['song_id']: 0 for _, song in self.songs.iterrows()}  # Total like (dari feedback)
+
     def select_top_songs(self, top_n=10):
-        all_songs = list(self.songs['track_name'])
-        if np.random.random() < self.epsilon:
-            selected_songs = np.random.choice(all_songs, size=top_n, replace=False)
-        else:
-            sorted_songs = sorted(self.similarities, key=self.similarities.get, reverse=True)
-            selected_songs = sorted_songs[:top_n]
-        return [(song, self.similarities[song]) for song in selected_songs]
+        # Pilih top 10 berdasarkan reward tertinggi
+        sorted_songs = sorted(self.rewards, key=self.rewards.get, reverse=True)[:top_n]
+        
+        # Mengembalikan daftar lagu dengan song_id dan reward-nya
+        return [(song_id, self.rewards[song_id]) for song_id in sorted_songs]
+
+    def update_feedback(self, song_id, liked):
+        # Update reward dan like berdasarkan feedback song_id
+        if liked:
+            self.rewards[song_id] += 1
+        self.likes[song_id] += 1
 
 class ThompsonSamplingRecommender:
     def __init__(self, songs):
         self.songs = songs
-        self.alpha = {song: songs[songs['track_name'] == song]['similarity'].values[0] + 1 for song in songs['track_name']}
-        self.beta = {song: 1 for song in songs['track_name']}
-    
+        # Inisialisasi alpha dan beta untuk song_id
+        self.alpha = {song['song_id']: song['similarity'] + 1 for _, song in self.songs.iterrows()}
+        self.beta = {song['song_id']: 1 for _, song in self.songs.iterrows()}
+
     def select_top_songs(self, top_n=10):
-        samples = {song: np.random.beta(self.alpha[song], self.beta[song]) for song in self.songs['track_name']}
+        # Ambil sampel dari distribusi Beta untuk setiap song_id
+        samples = {song_id: np.random.beta(self.alpha[song_id], self.beta[song_id]) for song_id in self.songs['song_id']}
+        
+        # Ambil top 10 song_id dengan nilai sampel tertinggi
         top_songs = sorted(samples, key=samples.get, reverse=True)[:top_n]
-        return [(song, samples[song]) for song in top_songs]
+        
+        # Mengembalikan daftar song_id dan nilai sampelnya
+        return [(song_id, samples[song_id]) for song_id in top_songs]
 
-def calculate_precision(recommendations, feedback):
-    liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-    hits = [rec for rec in recommendations if rec in liked_songs]
-    precision = len(hits) / len(recommendations) if recommendations else 0
-    return precision
+    def update_feedback(self, song_id, liked):
+        # Update alpha dan beta berdasarkan feedback song_id
+        if liked:
+            self.alpha[song_id] += 1
+        else:
+            self.beta[song_id] += 1
 
-def calculate_average_precision(recommendations, feedback):
-    liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-    hits = 0
-    sum_precisions = 0
-    for i, rec in enumerate(recommendations):
-        if rec in liked_songs:
-            hits += 1
-            sum_precisions += hits / (i + 1)
-    average_precision = sum_precisions / len(liked_songs) if liked_songs else 0
-    return average_precision
 
-def calculate_hitrate_at_k(recommendations, feedback, k=3):
-    liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-    top_k_recommendations = recommendations[:k]
-    hits = [rec for rec in top_k_recommendations if rec in liked_songs]
-    hitrate = 1 if len(hits)>0 else 0
-    return hitrate
+# def calculate_precision_at_k(recommendations, feedback, k):
+#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
+#     top_k_recommendations = recommendations[:k]
+#     hits = [rec for rec in top_k_recommendations if rec in liked_songs]
+#     precision = len(hits) / k if k > 0 else 0
+#     return precision
+
+# def calculate_average_precision_at_k(recommendations, feedback, k):
+#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
+#     hits = 0
+#     sum_precisions = 0
+#     for i, rec in enumerate(recommendations[:k]):
+#         if rec in liked_songs:
+#             hits += 1
+#             sum_precisions += hits / (i + 1)
+#     average_precision = sum_precisions / len(liked_songs) if liked_songs else 0
+#     return average_precision
+
+# def calculate_hitrate_at_k(recommendations, feedback, k):
+#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
+#     top_k_recommendations = recommendations[:k]
+#     hits = [rec for rec in top_k_recommendations if rec in liked_songs]
+#     hitrate = 1 if len(hits) > 0 else 0
+#     return hitrate
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -140,7 +195,7 @@ def login():
     
     if account and bcrypt.check_password_hash(account['password'], password):
         session['loggedin'] = True
-        session['id'] = account['id']
+        session['id'] = account['user_id']
         session['username'] = account['username']
         return jsonify({'message': 'Login successful!'}), 200
     else:
@@ -167,31 +222,50 @@ def recommend():
 
     try:
         data = request.json
-        song_names = data.get('song_names')
+        song_ids = data.get('song_ids', [])
+
+        print("🎵 Song IDs received:", song_ids)  # Debugging
         
-        similar_songs = find_similar_songs(song_names)
+        if not song_ids:
+            return jsonify({'error': 'song_ids is required and cannot be empty'}), 400
+
+        # Proses rekomendasi dengan song_ids
+        similar_songs = find_similar_songs(song_ids)
         if similar_songs is None or similar_songs.empty:
-            return jsonify({'error': 'Lagu tidak ditemukan. Coba input lain.'}), 404
-        
+            return jsonify({'error': 'No similar songs found. Try another input.'}), 404
+
         ts_model = ThompsonSamplingRecommender(similar_songs)
         ts_recommendations = ts_model.select_top_songs()
-        
-        epsilon_greedy_model = EpsilonGreedyRecommender(similar_songs)
-        epsilon_greedy_recommendations = epsilon_greedy_model.select_top_songs()
-        
-        cosine_recommendations = similar_songs[['track_name', 'track_artist', 'uri', 'similarity']].head(10).to_dict(orient='records')
-        
-        ts_recommendations = [{'song': song, 'artist': similar_songs.loc[similar_songs['track_name'] == song, 'track_artist'].values[0], 'uri': similar_songs.loc[similar_songs['track_name'] == song, 'uri'].values[0], 'score': score} for song, score in ts_recommendations]
-        
-        epsilon_greedy_recommendations = [{'song': song, 'artist': similar_songs.loc[similar_songs['track_name'] == song, 'track_artist'].values[0], 'uri': similar_songs.loc[similar_songs['track_name'] == song, 'uri'].values[0], 'score': score} for song, score in epsilon_greedy_recommendations]
-        
+
+        eg_model = EpsilonGreedyRecommender(similar_songs)
+        eg_recommendations = eg_model.select_top_songs()
+
+        # Format output
+        ts_recommendations = [{
+            'song_id': song_id,
+            'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
+            'artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
+            'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
+            'score': score
+        } for song_id, score in ts_recommendations]
+
+        eg_recommendations = [{
+            'song_id': song_id,
+            'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
+            'artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
+            'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
+            'score': score
+        } for song_id, score in eg_recommendations]
+
         return jsonify({
-            'cosine_recommendations': cosine_recommendations,
             'ts_recommendations': ts_recommendations,
-            'epsilon_greedy_recommendations': epsilon_greedy_recommendations
-        })
+            'epsilon_greedy_recommendations': eg_recommendations
+        }), 200
+
     except Exception as e:
+        print("🔥 Error in /recommend:", str(e))
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/feedback', methods=['POST'])
 def feedback():
@@ -200,24 +274,25 @@ def feedback():
 
     try:
         data = request.json
-        song_name = data.get('song_name')
+        song_id = data.get('song_id')  # Mengambil song_id, bukan song_name
         liked = data.get('liked')
         
         user_id = session.get('id')
         cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM feedback WHERE user_id = %s AND song_name = %s', (user_id, song_name))
+        cursor.execute('SELECT * FROM feedback WHERE user_id = %s AND song_id = %s', (user_id, song_id))
         existing_feedback = cursor.fetchone()
         
         if existing_feedback:
-            cursor.execute('UPDATE feedback SET liked = %s WHERE user_id = %s AND song_name = %s', (liked, user_id, song_name))
+            cursor.execute('UPDATE feedback SET liked = %s WHERE user_id = %s AND song_id = %s', (liked, user_id, song_id))
         else:
-            cursor.execute('INSERT INTO feedback (user_id, song_name, liked) VALUES (%s, %s, %s)', (user_id, song_name, liked))
+            cursor.execute('INSERT INTO feedback (user_id, song_id, liked) VALUES (%s, %s, %s)', (user_id, song_id, liked))
         
         mysql.connection.commit()
         
         return jsonify({'message': 'Feedback berhasil disimpan'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
     
 @app.route('/feedback', methods=['GET'])
 def get_feedback():
@@ -225,8 +300,9 @@ def get_feedback():
         return jsonify({'message': 'Please log in to view feedback!'}), 401
 
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM feedback WHERE user_id = %s', (session.get('id'),))
+    cursor.execute('SELECT song_id, liked FROM feedback WHERE user_id = %s', (session.get('id'),))
     feedback = cursor.fetchall()
+    
     return jsonify(feedback), 200
 
 @app.route('/save_accuracy', methods=['POST'])
@@ -237,18 +313,26 @@ def save_accuracy():
     try:
         data = request.json
         user_id = session.get('id')
-        ts_accuracy = data.get('ts_accuracy')
-        epsilon_greedy_accuracy = data.get('epsilon_greedy_accuracy')
-        ts_hitrate_at_3 = data.get('ts_hitrate_at_3')
-        epsilon_greedy_hitrate_at_3 = data.get('epsilon_greedy_hitrate_at_3')
-        
+        evaluations = data.get('evaluations')  # ← Expect list of dicts
+
         cursor = mysql.connection.cursor()
-        cursor.execute('INSERT INTO accuracy (user_id, ts_accuracy, epsilon_greedy_accuracy, ts_hitrate_at_3, epsilon_greedy_hitrate_at_3) VALUES (%s, %s, %s, %s, %s)', (user_id, ts_accuracy, epsilon_greedy_accuracy, ts_hitrate_at_3, epsilon_greedy_hitrate_at_3))
+
+        for item in evaluations:
+            algorithm = item['algorithm']  # 'Thompson Sampling' / 'Epsilon-Greedy'
+            metric_type = item['metric_type']  # 'Precision@K', 'MAP@K', 'HitRate@K'
+            k_value = item['k']
+            score = item['score']
+
+            cursor.execute('''
+                INSERT INTO evaluation_metrics (user_id, algorithm, metric_type, k_value, metric_score)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, algorithm, metric_type, k_value, score))
+
         mysql.connection.commit()
-        
-        return jsonify({'message': 'Accuracy saved successfully'}), 200
+        return jsonify({'message': 'All evaluation metrics saved successfully!'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/evaluate', methods=['GET'])
 def evaluate_users():
@@ -258,76 +342,80 @@ def evaluate_users():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('''
         SELECT 
-            users.username, 
-            MAX(accuracy.ts_accuracy) as ts_accuracy, 
-            MAX(accuracy.epsilon_greedy_accuracy) as epsilon_greedy_accuracy, 
-            MAX(accuracy.ts_hitrate_at_3) as ts_hitrate_at_3, 
-            MAX(accuracy.epsilon_greedy_hitrate_at_3) as epsilon_greedy_hitrate_at_3
-        FROM 
-            accuracy 
-        JOIN 
-            users ON users.id = accuracy.user_id 
-        GROUP BY 
-            users.username
+            users.username,
+            em.algorithm,
+            em.metric_type,
+            em.k_value,
+            em.metric_score
+        FROM evaluation_metrics em
+        JOIN users ON users.user_id = em.user_id
+        WHERE em.evaluated_at IN (
+            SELECT MAX(evaluated_at)
+            FROM evaluation_metrics
+            GROUP BY user_id, algorithm, metric_type, k_value
+        )
+        ORDER BY users.username, em.algorithm, em.metric_type, em.k_value
     ''')
     evaluation_data = cursor.fetchall()
 
     evaluations = {}
     for row in evaluation_data:
         username = row['username']
-        evaluations[username] = {
-            'ts_accuracy': row['ts_accuracy'],
-            'epsilon_greedy_accuracy': row['epsilon_greedy_accuracy'],
-            'ts_hitrate_at_3': row['ts_hitrate_at_3'],
-            'epsilon_greedy_hitrate_at_3': row['epsilon_greedy_hitrate_at_3']
-        }
+        if username not in evaluations:
+            evaluations[username] = {}
+        key = f"{row['algorithm']}_{row['metric_type']}_@{row['k_value']}"
+        evaluations[username][key] = row['metric_score']
+
+    # Tambahkan logging untuk memeriksa data sebelum mengirim respons
+    print("Evaluation Data:", evaluations)
     
     return jsonify(evaluations), 200
 
-@app.route('/combined_accuracy', methods=['GET'])
-def combined_accuracy():
-    if 'loggedin' not in session:
-        return jsonify({'message': 'Please log in to view combined accuracy!'}), 401
 
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('''
-        SELECT 
-            MAX(accuracy.ts_accuracy) as ts_accuracy, 
-            MAX(accuracy.epsilon_greedy_accuracy) as epsilon_greedy_accuracy, 
-            MAX(accuracy.ts_hitrate_at_3) as ts_hitrate_at_3, 
-            MAX(accuracy.epsilon_greedy_hitrate_at_3) as epsilon_greedy_hitrate_at_3
-        FROM 
-            accuracy 
-        JOIN 
-            users ON users.id = accuracy.user_id 
-        GROUP BY 
-            users.username
-    ''')
-    accuracy_data = cursor.fetchall()
+# @app.route('/combined_accuracy', methods=['GET'])
+# def combined_accuracy():
+#     if 'loggedin' not in session:
+#         return jsonify({'message': 'Please log in to view combined accuracy!'}), 401
 
-    total_ts_accuracy = 0
-    total_epsilon_greedy_accuracy = 0
-    total_ts_hitrate_at_3 = 0
-    total_epsilon_greedy_hitrate_at_3 = 0
-    count = len(accuracy_data)
+#     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+#     cursor.execute('''
+#         SELECT 
+#             MAX(accuracy.ts_accuracy) as ts_accuracy, 
+#             MAX(accuracy.epsilon_greedy_accuracy) as epsilon_greedy_accuracy, 
+#             MAX(accuracy.ts_hitrate_at_3) as ts_hitrate_at_3, 
+#             MAX(accuracy.epsilon_greedy_hitrate_at_3) as epsilon_greedy_hitrate_at_3
+#         FROM 
+#             accuracy 
+#         JOIN 
+#             users ON users.id = accuracy.user_id 
+#         GROUP BY 
+#             users.username
+#     ''')
+#     accuracy_data = cursor.fetchall()
 
-    for row in accuracy_data:
-        total_ts_accuracy += row['ts_accuracy']
-        total_epsilon_greedy_accuracy += row['epsilon_greedy_accuracy']
-        total_ts_hitrate_at_3 += row['ts_hitrate_at_3']
-        total_epsilon_greedy_hitrate_at_3 += row['epsilon_greedy_hitrate_at_3']
+#     total_ts_accuracy = 0
+#     total_epsilon_greedy_accuracy = 0
+#     total_ts_hitrate_at_3 = 0
+#     total_epsilon_greedy_hitrate_at_3 = 0
+#     count = len(accuracy_data)
+
+#     for row in accuracy_data:
+#         total_ts_accuracy += row['ts_accuracy']
+#         total_epsilon_greedy_accuracy += row['epsilon_greedy_accuracy']
+#         total_ts_hitrate_at_3 += row['ts_hitrate_at_3']
+#         total_epsilon_greedy_hitrate_at_3 += row['epsilon_greedy_hitrate_at_3']
     
-    combined_ts_accuracy = total_ts_accuracy / count if count > 0 else 0
-    combined_epsilon_greedy_accuracy = total_epsilon_greedy_accuracy / count if count > 0 else 0
-    combined_ts_hitrate_at_3 = total_ts_hitrate_at_3 / count if count > 0 else 0
-    combined_epsilon_greedy_hitrate_at_3 = total_epsilon_greedy_hitrate_at_3 / count if count > 0 else 0
+#     combined_ts_accuracy = total_ts_accuracy / count if count > 0 else 0
+#     combined_epsilon_greedy_accuracy = total_epsilon_greedy_accuracy / count if count > 0 else 0
+#     combined_ts_hitrate_at_3 = total_ts_hitrate_at_3 / count if count > 0 else 0
+#     combined_epsilon_greedy_hitrate_at_3 = total_epsilon_greedy_hitrate_at_3 / count if count > 0 else 0
 
-    return jsonify({
-        'combined_ts_accuracy': combined_ts_accuracy,
-        'combined_epsilon_greedy_accuracy': combined_epsilon_greedy_accuracy,
-        'combined_ts_hitrate_at_3': combined_ts_hitrate_at_3,
-        'combined_epsilon_greedy_hitrate_at_3': combined_epsilon_greedy_hitrate_at_3
-    }), 200
+#     return jsonify({
+#         'combined_ts_accuracy': combined_ts_accuracy,
+#         'combined_epsilon_greedy_accuracy': combined_epsilon_greedy_accuracy,
+#         'combined_ts_hitrate_at_3': combined_ts_hitrate_at_3,
+#         'combined_epsilon_greedy_hitrate_at_3': combined_epsilon_greedy_hitrate_at_3
+#     }), 200
 
 
 
@@ -342,7 +430,7 @@ def search():
         if not query:
             return jsonify({'suggestions': []})
         
-        matched_songs = spotify_df[(spotify_df['track_name'].str.lower().str.contains(query)) | (spotify_df['track_artist'].str.lower().str.contains(query))][['track_name', 'track_artist', 'uri']]
+        matched_songs = spotify_df[(spotify_df['track_name'].str.lower().str.contains(query)) | (spotify_df['track_artist'].str.lower().str.contains(query))][['song_id','track_name', 'track_artist', 'uri']]
         suggestions = matched_songs.to_dict(orient='records')
         
         return jsonify({'suggestions': suggestions})
