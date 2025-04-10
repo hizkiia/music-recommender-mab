@@ -38,13 +38,10 @@ def load_songs_from_db():
     # Hilangkan yang tidak bisa dikonversi (NaN hasil coercion)
     df.dropna(subset=features, inplace=True)
 
-    # Normalisasi
-    scaler = StandardScaler()
-    df[features] = scaler.fit_transform(df[features])
-
+    # Hapus duplikat
     df.drop_duplicates(inplace=True)
+    
     return df, features
-
 # Load data saat app dijalankan
 with app.app_context():
     spotify_df, features = load_songs_from_db()
@@ -383,52 +380,6 @@ def evaluate_users():
     print("Evaluation Data:", evaluations)
     
     return jsonify(evaluations), 200
-
-
-# @app.route('/combined_accuracy', methods=['GET'])
-# def combined_accuracy():
-#     if 'loggedin' not in session:
-#         return jsonify({'message': 'Please log in to view combined accuracy!'}), 401
-
-#     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-#     cursor.execute('''
-#         SELECT 
-#             MAX(accuracy.ts_accuracy) as ts_accuracy, 
-#             MAX(accuracy.epsilon_greedy_accuracy) as epsilon_greedy_accuracy, 
-#             MAX(accuracy.ts_hitrate_at_3) as ts_hitrate_at_3, 
-#             MAX(accuracy.epsilon_greedy_hitrate_at_3) as epsilon_greedy_hitrate_at_3
-#         FROM 
-#             accuracy 
-#         JOIN 
-#             users ON users.id = accuracy.user_id 
-#         GROUP BY 
-#             users.username
-#     ''')
-#     accuracy_data = cursor.fetchall()
-
-#     total_ts_accuracy = 0
-#     total_epsilon_greedy_accuracy = 0
-#     total_ts_hitrate_at_3 = 0
-#     total_epsilon_greedy_hitrate_at_3 = 0
-#     count = len(accuracy_data)
-
-#     for row in accuracy_data:
-#         total_ts_accuracy += row['ts_accuracy']
-#         total_epsilon_greedy_accuracy += row['epsilon_greedy_accuracy']
-#         total_ts_hitrate_at_3 += row['ts_hitrate_at_3']
-#         total_epsilon_greedy_hitrate_at_3 += row['epsilon_greedy_hitrate_at_3']
-    
-#     combined_ts_accuracy = total_ts_accuracy / count if count > 0 else 0
-#     combined_epsilon_greedy_accuracy = total_epsilon_greedy_accuracy / count if count > 0 else 0
-#     combined_ts_hitrate_at_3 = total_ts_hitrate_at_3 / count if count > 0 else 0
-#     combined_epsilon_greedy_hitrate_at_3 = total_epsilon_greedy_hitrate_at_3 / count if count > 0 else 0
-
-#     return jsonify({
-#         'combined_ts_accuracy': combined_ts_accuracy,
-#         'combined_epsilon_greedy_accuracy': combined_epsilon_greedy_accuracy,
-#         'combined_ts_hitrate_at_3': combined_ts_hitrate_at_3,
-#         'combined_epsilon_greedy_hitrate_at_3': combined_epsilon_greedy_hitrate_at_3
-#     }), 200
 
 @app.route('/all_songs', methods=['GET'])
 def get_all_songs():
