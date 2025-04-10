@@ -30,7 +30,7 @@ def load_songs_from_db():
 
     # Pilih fitur numerik
     features = ['energy', 'tempo', 'danceability', 'loudness', 'valence',
-                'speechiness', 'instrumentalness', 'acousticness', 'key', 'duration_ms']
+                'speechiness', 'instrumentalness', 'acousticness']
     
     # Paksa fitur jadi numerik (jika ada yang string)
     df[features] = df[features].apply(pd.to_numeric, errors='coerce')
@@ -244,7 +244,7 @@ def recommend():
         ts_recommendations = [{
             'song_id': song_id,
             'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
-            'artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
+            'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
             'score': score
         } for song_id, score in ts_recommendations]
@@ -252,7 +252,7 @@ def recommend():
         eg_recommendations = [{
             'song_id': song_id,
             'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
-            'artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
+            'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
             'score': score
         } for song_id, score in eg_recommendations]
@@ -297,12 +297,25 @@ def feedback():
 @app.route('/feedback', methods=['GET'])
 def get_feedback():
     if 'loggedin' not in session:
-        return jsonify({'message': 'Please log in to view feedback!'}), 401
+        return jsonify({'message': 'Please log in!'}), 401
 
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT song_id, liked FROM feedback WHERE user_id = %s', (session.get('id'),))
-    feedback = cursor.fetchall()
     
+    # Ambil feedback + data lagu
+    cursor.execute('''
+        SELECT 
+            f.song_id,
+            f.liked,  # Pastikan kolom ini ada
+            s.track_name,
+            s.track_artist,
+            s.playlist_genre,
+            s.uri
+        FROM feedback f
+        JOIN songs s ON f.song_id = s.song_id
+        WHERE f.user_id = %s
+    ''', (session['id'],))
+    
+    feedback = cursor.fetchall()
     return jsonify(feedback), 200
 
 @app.route('/save_accuracy', methods=['POST'])
@@ -417,7 +430,45 @@ def evaluate_users():
 #         'combined_epsilon_greedy_hitrate_at_3': combined_epsilon_greedy_hitrate_at_3
 #     }), 200
 
+@app.route('/all_songs', methods=['GET'])
+def get_all_songs():
+    if 'loggedin' not in session:
+        return jsonify({'message': 'Please log in to view songs!'}), 401
+    
+    try:
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM songs')
+        songs = cursor.fetchall()
 
+        return jsonify({'songs': songs})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+@app.route('/all-songs-by-genre', methods=['GET'])
+def get_all_songs_by_genre():
+    try:
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM songs')
+        all_songs = cursor.fetchall()
+        
+        # Kelompokkan lagu berdasarkan genre
+        songs_by_genre = {}
+        for song in all_songs:
+            genre = song['playlist_genre']
+            if genre not in songs_by_genre:
+                songs_by_genre[genre] = []
+            songs_by_genre[genre].append({
+                'song_id': song['song_id'],
+                'track_name': song['track_name'],
+                'track_artist': song['track_artist'],
+                'playlist_genre': song['playlist_genre'],
+                'playlist_subgenre': song['playlist_subgenre'],
+                'uri': song['uri']
+            })
+        
+        return jsonify(songs_by_genre), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/search', methods=['GET'])
 def search():

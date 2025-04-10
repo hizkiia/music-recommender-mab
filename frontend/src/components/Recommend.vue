@@ -82,7 +82,7 @@
                     style="width: 18rem;">
                     <div class="card-body">
                       <h5 class="card-title">{{ song.track_name }}</h5>
-                      <h6 class="card-subtitle mb-2 text-muted">{{ song.track_artist }}</h6>
+                      <h6 class="card-subtitle mb-2">{{ song.track_artist }}</h6>
                       <p class="card-text">
                         <span class="badge bg-info me-1">{{ song.playlist_genre }}</span>
                         <span class="badge bg-warning">{{ song.playlist_subgenre }}</span>
@@ -105,24 +105,27 @@
           <div class="col-12">
             <h3 class="mb-3"><i class="bi bi-collection me-2"></i>Cari berdasarkan genre</h3>
             <div class="accordion" id="genreAccordion">
-              <div class="accordion-item bg-dark text-white border-secondary" v-for="(genre, index) in genres"
-                :key="index">
+              <div class="accordion-item bg-dark text-white border-secondary"
+                v-for="(songs, genre, index) in allSongsByGenre" :key="index">
                 <h2 class="accordion-header" :id="'heading' + index">
                   <button class="accordion-button bg-dark text-white" type="button" data-bs-toggle="collapse"
                     :data-bs-target="'#collapse' + index" :aria-expanded="index === 0 ? 'true' : 'false'"
                     :aria-controls="'collapse' + index">
-                    {{ genre }}
+                    {{ genre }} ({{ songs.length }} lagu)
                   </button>
                 </h2>
                 <div :id="'collapse' + index" class="accordion-collapse collapse" :class="{ 'show': index === 0 }"
                   :aria-labelledby="'heading' + index" data-bs-parent="#genreAccordion">
                   <div class="accordion-body">
-                    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
-                      <div class="col" v-for="(song, songIndex) in getSongsByGenre(genre)" :key="songIndex">
+                    <div v-if="songs.length === 0" class="text-center py-3">
+                      Tidak ada lagu untuk genre ini
+                    </div>
+                    <div v-else class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+                      <div class="col" v-for="(song, songIndex) in songs" :key="songIndex">
                         <div class="card h-100 bg-secondary text-white">
                           <div class="card-body">
                             <h5 class="card-title">{{ song.track_name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ song.track_artist }}</h6>
+                            <h6 class="card-subtitle mb-2 ">{{ song.track_artist }}</h6>
                             <p class="card-text">
                               <span class="badge bg-primary me-1">{{ song.playlist_genre }}</span>
                               <span class="badge bg-warning">{{ song.playlist_subgenre }}</span>
@@ -132,10 +135,9 @@
                                 <i class="bi bi-play"></i> Play
                               </button>
                               <button class="btn btn-sm"
-                                :class="likedSongs.includes(song.track_name) ? 'btn-danger' : 'btn-outline-success'"
-                                @click="giveFeedback(song.track_name, !likedSongs.includes(song.track_name))">
-                                <i
-                                  :class="likedSongs.includes(song.track_name) ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
+                                :class="likedSongs.includes(song.song_id) ? 'btn-danger' : 'btn-outline-success'"
+                                @click="addLikedSongs(song.song_id, !likedSongs.includes(song.song_id))">
+                                <i :class="likedSongs.includes(song.song_id) ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
                               </button>
                             </div>
                           </div>
@@ -323,18 +325,18 @@
       </div>
 
       <!-- Liked Songs View -->
+
       <div v-if="currentView === 'liked'">
         <div class="row">
           <div class="col-12">
             <div class="card bg-dark text-white border-danger">
               <div class="card-header bg-danger text-white">
-                <h3><i class="bi bi-heart-fill me-2"></i>Lagu yang disukai</h3>
+                <h3><i class="bi bi-heart-fill me-2"></i>Lagu yang Disukai</h3>
               </div>
               <div class="card-body">
                 <div v-if="likedSongsList.length === 0" class="text-center py-5">
                   <i class="bi bi-music-note-beamed display-4 text-muted"></i>
                   <h4 class="mt-3 text-muted">Belum ada lagu yang disukai</h4>
-                  <p class="text-muted">Tekan tombol like untuk mengisi konten</p>
                 </div>
                 <div v-else>
                   <div class="table-responsive">
@@ -342,14 +344,14 @@
                       <thead>
                         <tr>
                           <th>#</th>
-                          <th>Song</th>
-                          <th>Artist</th>
+                          <th>Judul Lagu</th>
+                          <th>Artis</th>
                           <th>Genre</th>
-                          <th>Actions</th>
+                          <th>Aksi</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="(song, index) in likedSongsList" :key="index">
+                        <tr v-for="(song, index) in likedSongsList" :key="song.song_id">
                           <td>{{ index + 1 }}</td>
                           <td>{{ song.track_name }}</td>
                           <td>{{ song.track_artist }}</td>
@@ -357,7 +359,7 @@
                             <span class="badge bg-primary">{{ song.playlist_genre }}</span>
                           </td>
                           <td>
-                            <button class="btn btn-sm btn-danger me-2" @click="unlikeSong(song)">
+                            <button class="btn btn-sm btn-danger me-2" @click="unlikeLikedSong(song)">
                               <i class="bi bi-heartbreak"></i> Unlike
                             </button>
                             <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
@@ -434,6 +436,7 @@ export default {
       likedSongs: [],
       likedSongsList: [],
       allSongs: [],
+      allSongsByGenre: {},
       genres: ['pop', 'rock', 'rap', 'latin', 'r&b', 'edm'],
       showResults: false,
       showSpotifyPlayer: false
@@ -541,6 +544,16 @@ export default {
         });
     }
     ,
+    addLikedSongs(songId, liked) {
+      axios.post('http://localhost:5000/feedback', { song_id: songId, liked: liked })
+        .then(response => {
+          this.updateLikedStatus(songId, liked);
+          this.fetchLikedSongs();
+        })
+        .catch(error => {
+          console.error("Error submitting feedback:", error);
+        });
+    },
     giveFeedback(songId, liked) {
       axios.post('http://localhost:5000/feedback', { song_id: songId, liked: liked })
         .then(response => {
@@ -582,19 +595,19 @@ export default {
     fetchLikedSongs() {
       axios.get('http://localhost:5000/feedback')
         .then(response => {
-          // Filter feedback yang "liked" dan ambil song_id
-          const feedback = response.data.filter(f => f.liked);
-          this.likedSongs = feedback.map(f => f.song_id);
+          // Simpan seluruh data lagu yang disukai
+          const feedback = response.data.filter(song => song.liked);
+          this.likedSongsList = feedback.map(song => ({
+            song_id: song.song_id,
+            track_name: song.track_name,
+            track_artist: song.track_artist,
+            playlist_genre: song.playlist_genre,
+            uri: song.uri
+          }));
+          this.likedSongs = feedback.map(song => song.song_id);
 
-          this.likedSongsList = feedback.map(f => {
-            return {
-              track_name: f.track_name,
-              track_artist: f.track_artist,
-              playlist_genre: f.playlist_genre, // Asumsi data genre ada di feedback
-              uri: f.uri
-            };
-          });
-
+          // Simpan hanya song_id untuk pengecekan like
+          // this.likedSongs = response.data.map(song => song.song_id);
         })
         .catch(error => {
           console.error("Error fetching liked songs:", error);
@@ -604,37 +617,42 @@ export default {
     unlikeSong(song) {
       this.giveFeedback(song.song_id, false); // Use song_id instead of track_name
     },
+    unlikeLikedSong(song) {
+      this.addLikedSongs(song.song_id, false);
+      this.likedSongsList = this.likedSongsList.filter(s => s.song_id !== song.song_id);
+      this.likedSongs = this.likedSongs.filter(id => id !== song.song_id);
+    },
     updateAccuracy() {
       axios.get('http://localhost:5000/feedback')
         .then(response => {
-          const likedSongs = response.data.filter(f => f.liked).map(f => f.song_id);
+          // Filter hanya lagu yang disukai (liked=1)
+          const likedSongs = response.data
+            .filter(feedback => feedback.liked === 1 || feedback.liked === true)
+            .map(feedback => feedback.song_id);
 
+          // Hitung metrik
           this.tsAccuracy = this.calculatePrecision(this.tsRecommendations, likedSongs);
           this.epsilonGreedyAccuracy = this.calculatePrecision(this.epsilonGreedyRecommendations, likedSongs);
           this.tsHitrateAt3 = this.calculateHitrate(this.tsRecommendations.slice(0, 3), likedSongs);
           this.epsilonGreedyHitrateAt3 = this.calculateHitrate(this.epsilonGreedyRecommendations.slice(0, 3), likedSongs);
         })
-        .catch(console.error);
+        .catch(error => {
+          console.error("Error updating accuracy:", error);
+        });
     },
+
     calculatePrecision(recommendations, likedSongs) {
-      const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
-      return relevant.length / recommendations.length;
+      if (!recommendations?.length) return 0;
+      const hits = recommendations.filter(rec => likedSongs.includes(rec.song_id)).length;
+      return hits / recommendations.length;
     },
+
     calculateHitrate(recommendations, likedSongs) {
-      const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
-      return relevant.length > 0 ? 1 : 0;
+      if (!recommendations?.length) return 0;
+      const hits = recommendations.filter(rec => likedSongs.includes(rec.song_id)).length;
+      return hits > 0 ? 1 : 0;
     },
-    calculateAccuracy(recommendations, feedback) {
-      const likedSongs = feedback.filter(f => f.liked).map(f => f.song_id);
-      const recommendedLiked = recommendations.filter(rec => likedSongs.includes(rec.song_id));
-      return recommendedLiked.length / recommendations.length || 0;
-    },
-    calculateHitrateAt3(recommendations, feedback) {
-      const likedSongs = feedback.filter(f => f.liked).map(f => f.song_id);
-      const top3Recommendations = recommendations.slice(0, 3);
-      const recommendedLiked = top3Recommendations.filter(rec => likedSongs.includes(rec.song_id));
-      return recommendedLiked.length > 0 ? 1 : 0;
-    },
+
     saveAccuracy() {
       axios.get('http://localhost:5000/feedback')
         .then(response => {
@@ -701,7 +719,7 @@ export default {
         });
     },
     getSongsByGenre(genre) {
-      return this.selectedSongs.filter(song => song.playlist_genre === genre) || [];
+      return this.allSongsByGenre[genre] || [];
     },
     fetchAllSongs() {
       axios.get('http://localhost:5000/search?query=')
@@ -712,14 +730,26 @@ export default {
           console.error("Error fetching all songs:", error);
         });
     }
+    , fetchAllSongsByGenre() {
+      axios.get('http://localhost:5000/all-songs-by-genre')
+        .then(response => {
+          this.allSongsByGenre = response.data;
+        })
+        .catch(error => {
+          console.error("Error fetching songs by genre:", error);
+        });
+    }
   },
   created() {
+
     axios.get('http://localhost:5000/profile')
       .then(response => {
         if (response.status === 200) {
           this.username = response.data.message.split(' ')[1];
           this.fetchLikedSongs();
           this.fetchAllSongs();
+          this.fetchAllSongsByGenre();
+
         } else {
           this.$router.push('/login');
         }
@@ -729,7 +759,9 @@ export default {
         this.$router.push('/login');
       });
   }
+
 };
+
 </script>
 
 <style scoped>
