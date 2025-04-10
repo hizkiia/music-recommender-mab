@@ -1,6 +1,6 @@
 <template>
   <div class="admin-container bg-dark text-white">
-    <h1 class="text-center mb-5 text-light">📊 Admin Dashboard - Evaluation Metrics</h1>
+    <h1 class="text-center mb-5 text-light">Admin Dashboard - Evaluation Metrics</h1>
 
     <!-- Section Precision -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
@@ -109,81 +109,261 @@
         </tbody>
       </table>
     </div>
+    <!-- Summary Charts Section -->
+    <div class="summary-charts mb-5">
+      <h2 class="text-center mb-4 text-light">Summary Charts</h2>
+      <div class="row g-4">
+        <!-- Precision Chart -->
+        <div class="col-md-4">
+          <div class="chart-container bg-secondary p-4 rounded">
+            <h4 class="text-center mb-3">Precision@K</h4>
+            <canvas ref="precisionChart"></canvas>
+          </div>
+        </div>
 
-    <!-- Summary Cards -->
-    <div class="summary-section">
-      <h2 class="text-center mb-4 text-light">Summary Statistics</h2>
-      <div class="summary-cards d-flex flex-wrap gap-4 justify-content-center">
-        <div class="summary-card bg-gradient rounded text-white p-4">
-          <h4>Average Precision@10</h4>
-          <p>Thompson: {{ calculateAverage('Thompson Sampling_Precision@K_@10') }}</p>
-          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_Precision@K_@10') }}</p>
+        <!-- MAP Chart -->
+        <div class="col-md-4">
+          <div class="chart-container bg-secondary p-4 rounded">
+            <h4 class="text-center mb-3">MAP@K</h4>
+            <canvas ref="mapChart"></canvas>
+          </div>
         </div>
-        <div class="summary-card bg-gradient rounded text-white p-4">
-          <h4>Average MAP@10</h4>
-          <p>Thompson: {{ calculateAverage('Thompson Sampling_MAP@K_@10') }}</p>
-          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_MAP@K_@10') }}</p>
-        </div>
-        <div class="summary-card bg-gradient rounded text-white p-4">
-          <h4>Average HitRate@3</h4>
-          <p>Thompson: {{ calculateAverage('Thompson Sampling_HitRate@K_@3') }}</p>
-          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_HitRate@K_@3') }}</p>
+
+        <!-- Hit Rate Chart -->
+        <div class="col-md-4">
+          <div class="chart-container bg-secondary p-4 rounded">
+            <h4 class="text-center mb-3">HitRate@K</h4>
+            <canvas ref="hitRateChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
+    <div class="summary-statistics mb-5">
+      <h2 class="text-center mb-4 text-light">Summary Statistics</h2>
+      <div class="row g-4">
+        <!-- Precision Cards -->
+        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'precision' + k">
+          <div class="metric-card bg-gradient-blue rounded p-4">
+            <h5 class="metric-title">Precision@{{ k }}</h5>
+            <div class="metric-values">
+              <div class="algorithm-metric">
+                <span class="badge bg-primary me-2">TS</span>
+                <span>{{ calculateAverage(`Thompson Sampling_Precision@K_@${k}`).toFixed(3) }}</span>
+              </div>
+              <div class="algorithm-metric">
+                <span class="badge bg-danger me-2">EG</span>
+                <span>{{ calculateAverage(`Epsilon-Greedy_Precision@K_@${k}`).toFixed(3) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAP Cards -->
+        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'map' + k">
+          <div class="metric-card bg-gradient-purple rounded p-4">
+            <h5 class="metric-title">MAP@{{ k }}</h5>
+            <div class="metric-values">
+              <div class="algorithm-metric">
+                <span class="badge bg-primary me-2">TS</span>
+                <span>{{ calculateAverage(`Thompson Sampling_MAP@K_@${k}`).toFixed(3) }}</span>
+              </div>
+              <div class="algorithm-metric">
+                <span class="badge bg-danger me-2">EG</span>
+                <span>{{ calculateAverage(`Epsilon-Greedy_MAP@K_@${k}`).toFixed(3) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hit Rate Cards -->
+        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'hitrate' + k">
+          <div class="metric-card bg-gradient-green rounded p-4">
+            <h5 class="metric-title">HitRate@{{ k }}</h5>
+            <div class="metric-values">
+              <div class="algorithm-metric">
+                <span class="badge bg-primary me-2">TS</span>
+                <span>{{ calculateAverage(`Thompson Sampling_HitRate@K_@${k}`).toFixed(3) }}</span>
+              </div>
+              <div class="algorithm-metric">
+                <span class="badge bg-danger me-2">EG</span>
+                <span>{{ calculateAverage(`Epsilon-Greedy_HitRate@K_@${k}`).toFixed(3) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
   </div>
 </template>
 
 <script>
 import axios from 'axios';
+import Chart from 'chart.js/auto';
 
 export default {
   name: 'AdminPage',
   data() {
     return {
-      evaluations: {}
+      evaluations: {},
+      charts: {
+        precision: null,
+        map: null,
+        hitRate: null
+      }
     };
   },
-  async created() {
+  async mounted() {
     await this.fetchEvaluationData();
+    this.renderCharts();
   },
   methods: {
     async fetchEvaluationData() {
       try {
-        const response = await axios.get('http://localhost:5000/evaluate', {
-          withCredentials: true
-        });
+        const response = await axios.get('http://localhost:5000/evaluate');
         this.evaluations = response.data;
       } catch (error) {
         console.error('Error fetching evaluation data:', error);
       }
     },
-    formatNumber(value) {
-      if (value === undefined || value === null) return '-';
-      return Number(value).toFixed(3);
+
+    renderCharts() {
+      // Destroy existing charts if they exist
+      Object.values(this.charts).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+
+      // Prepare data for charts
+      const ks = [1, 3, 5, 10];
+      const algorithms = ['Thompson Sampling', 'Epsilon-Greedy'];
+
+      // Precision Chart
+      this.charts.precision = new Chart(this.$refs.precisionChart, {
+        type: 'bar',
+        data: this.getChartData('Precision@K', ks, algorithms),
+        options: this.getChartOptions('Precision@K')
+      });
+
+      // MAP Chart
+      this.charts.map = new Chart(this.$refs.mapChart, {
+        type: 'bar',
+        data: this.getChartData('MAP@K', ks, algorithms),
+        options: this.getChartOptions('MAP@K')
+      });
+
+      // Hit Rate Chart
+      this.charts.hitRate = new Chart(this.$refs.hitRateChart, {
+        type: 'bar',
+        data: this.getChartData('HitRate@K', ks, algorithms),
+        options: this.getChartOptions('HitRate@K')
+      });
     },
+
+    getChartData(metricType, ks, algorithms) {
+      const backgroundColors = [
+        'rgba(54, 162, 235, 0.7)',  // Thompson Sampling (blue)
+        'rgba(255, 99, 132, 0.7)'   // Epsilon-Greedy (red)
+      ];
+
+      return {
+        labels: ks.map(k => `K=${k}`),
+        datasets: algorithms.map((algo, idx) => ({
+          label: algo,
+          data: ks.map(k => this.calculateAverage(`${algo}_${metricType}_@${k}`)),
+          backgroundColor: backgroundColors[idx],
+          borderColor: backgroundColors[idx].replace('0.7', '1'),
+          borderWidth: 1
+        }))
+      };
+    },
+
+    getChartOptions(title) {
+      return {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#fff'
+            }
+          },
+          title: {
+            display: true,
+            text: title,
+            color: '#fff'
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#fff'
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
+          },
+          y: {
+            min: 0,
+            max: 1,
+            ticks: {
+              color: '#fff',
+              stepSize: 0.2
+            },
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            }
+          }
+        }
+      };
+    },
+
     calculateAverage(metricKey) {
       let sum = 0;
       let count = 0;
-      
+
       for (const userData of Object.values(this.evaluations)) {
         if (userData[metricKey] !== undefined) {
-          sum += userData[metricKey];
+          sum += parseFloat(userData[metricKey]);
           count++;
         }
       }
-      
-      return count > 0 ? (sum / count).toFixed(3) : '0.000';
+
+      return count > 0 ? sum / count : 0;
+    },
+
+    formatNumber(value) {
+      if (value === undefined || value === null) return '-';
+      return Number(value).toFixed(3);
     }
+  },
+  beforeUnmount() {
+    // Clean up charts when component is destroyed
+    Object.values(this.charts).forEach(chart => {
+      if (chart) chart.destroy();
+    });
   }
 };
 </script>
 
-
-
-
-
 <style scoped>
+.chart-container {
+  height: 350px;
+  position: relative;
+}
+
+.summary-charts {
+  margin-bottom: 3rem;
+}
+
+/* Keep your existing styles */
 .admin-container {
   padding: 40px 20px;
   min-height: 100vh;
@@ -207,7 +387,8 @@ export default {
   background-color: #2a2a2a;
 }
 
-.table th, .table td {
+.table th,
+.table td {
   vertical-align: middle;
 }
 
@@ -232,5 +413,48 @@ export default {
 .summary-card p {
   font-size: 0.95rem;
   margin-bottom: 8px;
+}
+
+/* Metric Cards Styling */
+.metric-card {
+  height: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-5px);
+}
+
+.metric-title {
+  font-size: 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  color: white;
+}
+
+.metric-values {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.algorithm-metric {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.bg-gradient-blue {
+  background: linear-gradient(135deg, #3a3a3a, #1e3b70);
+}
+
+.bg-gradient-purple {
+  background: linear-gradient(135deg, #3a3a3a, #4a1d6b);
+}
+
+.bg-gradient-green {
+  background: linear-gradient(135deg, #3a3a3a, #1a5a3a);
 }
 </style>
