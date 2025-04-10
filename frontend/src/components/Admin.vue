@@ -1,11 +1,11 @@
 <template>
-  <div class="admin-container">
-    <h1>Admin Dashboard - Evaluation Metrics</h1>
-    
+  <div class="admin-container bg-dark text-white">
+    <h1 class="text-center mb-5 text-light">📊 Admin Dashboard - Evaluation Metrics</h1>
+
     <!-- Section Precision -->
-    <div class="metrics-section">
-      <h2>Precision@K</h2>
-      <table class="metrics-table">
+    <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
+      <h2 class="section-title">Precision@K</h2>
+      <table class="metrics-table table table-dark table-hover table-bordered rounded">
         <thead>
           <tr>
             <th>User</th>
@@ -19,7 +19,7 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
-              <td rowspan="2">{{ username }}</td>
+              <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
               <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@1']) }}</td>
               <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@3']) }}</td>
@@ -37,11 +37,11 @@
         </tbody>
       </table>
     </div>
-    
+
     <!-- Section MAP -->
-    <div class="metrics-section">
-      <h2>MAP@K</h2>
-      <table class="metrics-table">
+    <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
+      <h2 class="section-title">MAP@K</h2>
+      <table class="metrics-table table table-dark table-hover table-bordered rounded">
         <thead>
           <tr>
             <th>User</th>
@@ -55,7 +55,7 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
-              <td rowspan="2">{{ username }}</td>
+              <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
               <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@1']) }}</td>
               <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@3']) }}</td>
@@ -73,11 +73,11 @@
         </tbody>
       </table>
     </div>
-    
+
     <!-- Section HitRate -->
-    <div class="metrics-section">
-      <h2>HitRate@K</h2>
-      <table class="metrics-table">
+    <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
+      <h2 class="section-title">HitRate@K</h2>
+      <table class="metrics-table table table-dark table-hover table-bordered rounded">
         <thead>
           <tr>
             <th>User</th>
@@ -91,7 +91,7 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
-              <td rowspan="2">{{ username }}</td>
+              <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
               <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@1']) }}</td>
               <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@3']) }}</td>
@@ -109,25 +109,25 @@
         </tbody>
       </table>
     </div>
-    
-    <!-- Summary Statistics -->
+
+    <!-- Summary Cards -->
     <div class="summary-section">
-      <h2>Summary Statistics</h2>
-      <div class="summary-cards">
-        <div class="summary-card">
-          <h3>Average Precision@10</h3>
-          <p>Thompson Sampling: {{ calculateAverage('Thompson Sampling_Precision@K_@10') }}</p>
-          <p>Epsilon-Greedy: {{ calculateAverage('Epsilon-Greedy_Precision@K_@10') }}</p>
+      <h2 class="text-center mb-4 text-light">Summary Statistics</h2>
+      <div class="summary-cards d-flex flex-wrap gap-4 justify-content-center">
+        <div class="summary-card bg-gradient rounded text-white p-4">
+          <h4>Average Precision@10</h4>
+          <p>Thompson: {{ calculateAverage('Thompson Sampling_Precision@K_@10') }}</p>
+          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_Precision@K_@10') }}</p>
         </div>
-        <div class="summary-card">
-          <h3>Average MAP@10</h3>
-          <p>Thompson Sampling: {{ calculateAverage('Thompson Sampling_MAP@K_@10') }}</p>
-          <p>Epsilon-Greedy: {{ calculateAverage('Epsilon-Greedy_MAP@K_@10') }}</p>
+        <div class="summary-card bg-gradient rounded text-white p-4">
+          <h4>Average MAP@10</h4>
+          <p>Thompson: {{ calculateAverage('Thompson Sampling_MAP@K_@10') }}</p>
+          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_MAP@K_@10') }}</p>
         </div>
-        <div class="summary-card">
-          <h3>Average HitRate@3</h3>
-          <p>Thompson Sampling: {{ calculateAverage('Thompson Sampling_HitRate@K_@3') }}</p>
-          <p>Epsilon-Greedy: {{ calculateAverage('Epsilon-Greedy_HitRate@K_@3') }}</p>
+        <div class="summary-card bg-gradient rounded text-white p-4">
+          <h4>Average HitRate@3</h4>
+          <p>Thompson: {{ calculateAverage('Thompson Sampling_HitRate@K_@3') }}</p>
+          <p>Epsilon: {{ calculateAverage('Epsilon-Greedy_HitRate@K_@3') }}</p>
         </div>
       </div>
     </div>
@@ -180,88 +180,57 @@ export default {
 </script>
 
 
+
+
+
 <style scoped>
-/* Tetap gunakan style yang sama seperti sebelumnya */
 .admin-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: 100vh;
+  background-color: #121212;
+  color: #ffffff;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #333;
-}
-
-.metrics-section {
-  margin-bottom: 40px;
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-h2 {
-  color: #444;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #ddd;
+.section-title {
+  color: #ffffff;
+  border-bottom: 2px solid #4e8cff;
   padding-bottom: 10px;
-}
-
-.metrics-table {
-  width: 100%;
-  border-collapse: collapse;
   margin-bottom: 20px;
 }
 
-.metrics-table th, .metrics-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
+.table th {
+  background-color: #1f1f1f;
+  color: #dcdcdc;
 }
 
-.metrics-table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
+.table td {
+  background-color: #2a2a2a;
 }
 
-.metrics-table tr:hover {
-  background-color: #f5f5f5;
-}
-
-.summary-section {
-  margin-top: 40px;
-  background: #f0f8ff;
-  padding: 20px;
-  border-radius: 8px;
+.table th, .table td {
+  vertical-align: middle;
 }
 
 .summary-cards {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 20px;
+  gap: 2rem;
 }
 
 .summary-card {
-  flex: 1;
   min-width: 250px;
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  max-width: 320px;
+  background: linear-gradient(135deg, #3a3a3a, #1e1e1e);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.summary-card h3 {
-  margin-top: 0;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
+.summary-card h4 {
+  border-bottom: 1px solid #777;
   padding-bottom: 10px;
+  margin-bottom: 15px;
+  font-size: 1.25rem;
 }
 
 .summary-card p {
-  margin: 8px 0;
-  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
 }
 </style>

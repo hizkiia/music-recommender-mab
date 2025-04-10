@@ -1,10 +1,11 @@
 <template>
   <div class="bg-dark text-white min-vh-100">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-deepblue">
       <div class="container-fluid">
         <a class="navbar-brand" href="#">Music Recommendation</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+          aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
@@ -15,12 +16,14 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#" @click.prevent="showRecommendations" :class="{ 'active': currentView === 'recommendations' }">
+              <a class="nav-link" href="#" @click.prevent="showRecommendations"
+                :class="{ 'active': currentView === 'recommendations' }">
                 <i class="bi bi-music-note-list me-1"></i> Rekomendasi
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#" @click.prevent="showLikedSongs" :class="{ 'active': currentView === 'liked' }">
+              <a class="nav-link" href="#" @click.prevent="showLikedSongs"
+                :class="{ 'active': currentView === 'liked' }">
                 <i class="bi bi-heart me-1"></i> Liked Songs
               </a>
             </li>
@@ -36,7 +39,7 @@
         </div>
       </div>
     </nav>
-    
+
     <!-- Main Content -->
     <div class="container mt-4">
       <!-- Home View -->
@@ -45,24 +48,17 @@
           <div class="col-12">
             <div class="card bg-dark text-white border-secondary">
               <div class="card-body">
-                <h3 class="card-title"><i class="bi bi-search me-2"></i>Discover Music</h3>
+                <h3 class="card-title"><i class="bi bi-search me-2"></i>Cari Lagu</h3>
                 <div class="input-group mb-3">
-                  <input 
-                    type="text" 
-                    class="form-control bg-secondary text-white border-secondary" 
-                    v-model="searchQuery" 
-                    @input="fetchSuggestions" 
-                    placeholder="Search for a song or artist..."
-                    @keyup.enter="addSong">
+                  <input type="text" class="form-control bg-secondary text-white border-secondary" v-model="searchQuery"
+                    @input="fetchSuggestions" placeholder="Search for a song or artist..." @keyup.enter="addSong">
                   <button class="btn btn-primary" type="button" @click="addSong">
                     <i class="bi bi-plus-lg"></i> Add
                   </button>
                 </div>
                 <div v-if="suggestions.length" class="suggestions-dropdown">
                   <ul class="list-group">
-                    <li 
-                      v-for="(suggestion, index) in suggestions" 
-                      :key="index" 
+                    <li v-for="(suggestion, index) in suggestions" :key="index"
                       class="list-group-item list-group-item-action bg-secondary text-white"
                       @click="selectSong(suggestion)">
                       {{ suggestion.track_name }} - {{ suggestion.track_artist }}
@@ -79,9 +75,11 @@
           <div class="col-12">
             <div class="card bg-dark text-white border-secondary">
               <div class="card-body">
-                <h4 class="card-title"><i class="bi bi-list-check me-2"></i>Selected Songs ({{ selectedSongs.length }})</h4>
+                <h4 class="card-title"><i class="bi bi-list-check me-2"></i>Lagu yang dipilih ({{ selectedSongs.length
+                }})</h4>
                 <div class="d-flex flex-wrap gap-2">
-                  <div v-for="(song, index) in selectedSongs" :key="index" class="card bg-secondary text-white" style="width: 18rem;">
+                  <div v-for="(song, index) in selectedSongs" :key="index" class="card bg-secondary text-white"
+                    style="width: 18rem;">
                     <div class="card-body">
                       <h5 class="card-title">{{ song.track_name }}</h5>
                       <h6 class="card-subtitle mb-2 text-muted">{{ song.track_artist }}</h6>
@@ -90,13 +88,13 @@
                         <span class="badge bg-warning">{{ song.playlist_subgenre }}</span>
                       </p>
                       <button class="btn btn-sm btn-outline-danger" @click="removeSong(index)">
-                        <i class="bi bi-trash"></i> Remove
+                        <i class="bi bi-trash"></i> Hapus
                       </button>
                     </div>
                   </div>
                 </div>
                 <button class="btn btn-primary mt-3" @click="fetchRecommendations" :disabled="selectedSongs.length < 3">
-                  <i class="bi bi-stars me-1"></i> Get Recommendations
+                  <i class="bi bi-stars me-1"></i> Dapatkan Rekomendasi
                 </button>
               </div>
             </div>
@@ -105,15 +103,19 @@
 
         <div class="row">
           <div class="col-12">
-            <h3 class="mb-3"><i class="bi bi-collection me-2"></i>Browse by Genre</h3>
+            <h3 class="mb-3"><i class="bi bi-collection me-2"></i>Cari berdasarkan genre</h3>
             <div class="accordion" id="genreAccordion">
-              <div class="accordion-item bg-dark text-white border-secondary" v-for="(genre, index) in genres" :key="index">
+              <div class="accordion-item bg-dark text-white border-secondary" v-for="(genre, index) in genres"
+                :key="index">
                 <h2 class="accordion-header" :id="'heading' + index">
-                  <button class="accordion-button bg-dark text-white" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse' + index" :aria-expanded="index === 0 ? 'true' : 'false'" :aria-controls="'collapse' + index">
+                  <button class="accordion-button bg-dark text-white" type="button" data-bs-toggle="collapse"
+                    :data-bs-target="'#collapse' + index" :aria-expanded="index === 0 ? 'true' : 'false'"
+                    :aria-controls="'collapse' + index">
                     {{ genre }}
                   </button>
                 </h2>
-                <div :id="'collapse' + index" class="accordion-collapse collapse" :class="{ 'show': index === 0 }" :aria-labelledby="'heading' + index" data-bs-parent="#genreAccordion">
+                <div :id="'collapse' + index" class="accordion-collapse collapse" :class="{ 'show': index === 0 }"
+                  :aria-labelledby="'heading' + index" data-bs-parent="#genreAccordion">
                   <div class="accordion-body">
                     <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
                       <div class="col" v-for="(song, songIndex) in getSongsByGenre(genre)" :key="songIndex">
@@ -129,8 +131,11 @@
                               <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
                                 <i class="bi bi-play"></i> Play
                               </button>
-                              <button class="btn btn-sm" :class="likedSongs.includes(song.track_name) ? 'btn-danger' : 'btn-outline-success'" @click="giveFeedback(song.track_name, !likedSongs.includes(song.track_name))">
-                                <i :class="likedSongs.includes(song.track_name) ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
+                              <button class="btn btn-sm"
+                                :class="likedSongs.includes(song.track_name) ? 'btn-danger' : 'btn-outline-success'"
+                                @click="giveFeedback(song.track_name, !likedSongs.includes(song.track_name))">
+                                <i
+                                  :class="likedSongs.includes(song.track_name) ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
                               </button>
                             </div>
                           </div>
@@ -151,36 +156,29 @@
           <div class="col-12">
             <div class="card bg-dark text-white border-secondary">
               <div class="card-body">
-                <h3 class="card-title"><i class="bi bi-magic me-2"></i>Get Recommendations</h3>
-                <p class="text-muted">Select at least 3 songs you like to get personalized recommendations</p>
-                
+                <h3 class="card-title"><i class="bi bi-magic me-2"></i>Rekomendasi Musik</h3>
+                <p class="">Pilih 5 lagu favorit kamu</p>
+
                 <div class="input-group mb-3">
-                  <input 
-                    type="text" 
-                    class="form-control bg-secondary text-white border-secondary" 
-                    v-model="searchQuery" 
-                    @input="fetchSuggestions" 
-                    placeholder="Search for a song or artist..."
-                    @keyup.enter="addSong">
+                  <input type="text" class="form-control bg-secondary text-white border-secondary" v-model="searchQuery"
+                    @input="fetchSuggestions" placeholder="Search for a song or artist..." @keyup.enter="addSong">
                   <button class="btn btn-primary" type="button" @click="addSong">
                     <i class="bi bi-plus-lg"></i> Add
                   </button>
                 </div>
-                
+
                 <div v-if="suggestions.length" class="suggestions-dropdown">
                   <ul class="list-group">
-                    <li 
-                      v-for="(suggestion, index) in suggestions" 
-                      :key="index" 
+                    <li v-for="(suggestion, index) in suggestions" :key="index"
                       class="list-group-item list-group-item-action bg-secondary text-white"
                       @click="selectSong(suggestion)">
                       {{ suggestion.track_name }} - {{ suggestion.track_artist }}
                     </li>
                   </ul>
                 </div>
-                
+
                 <div v-if="selectedSongs.length" class="mt-3">
-                  <h5>Selected Songs:</h5>
+                  <h5>Lagu yang dipilih:</h5>
                   <div class="d-flex flex-wrap gap-2">
                     <span v-for="(song, index) in selectedSongs" :key="index" class="badge bg-primary p-2">
                       {{ song.track_name }}
@@ -190,9 +188,9 @@
                     </span>
                   </div>
                 </div>
-                
+
                 <button class="btn btn-primary mt-3" @click="fetchRecommendations" :disabled="selectedSongs.length < 3">
-                  <i class="bi bi-stars me-1"></i> Get Recommendations
+                  <i class="bi bi-stars me-1"></i> Dapatkan Rekomendasi
                 </button>
               </div>
             </div>
@@ -223,7 +221,8 @@
                         <td>{{ song.track_name }}</td>
                         <td>{{ song.track_artist }}</td>
                         <td>
-                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'" @click="giveFeedback(song.song_id, !song.liked)">
+                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'"
+                            @click="giveFeedback(song.song_id, !song.liked)">
                             <i :class="song.liked ? 'bi bi-hand-thumbs-down' : 'bi bi-hand-thumbs-up'"></i>
                           </button>
                           <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
@@ -239,14 +238,18 @@
                 <div class="row">
                   <div class="col">
                     <div class="progress">
-                      <div class="progress-bar bg-success" role="progressbar" :style="{ width: (tsAccuracy * 100) + '%' }" :aria-valuenow="tsAccuracy * 100" aria-valuemin="0" aria-valuemax="100">
+                      <div class="progress-bar bg-success" role="progressbar"
+                        :style="{ width: (tsAccuracy * 100) + '%' }" :aria-valuenow="tsAccuracy * 100" aria-valuemin="0"
+                        aria-valuemax="100">
                         Precision: {{ (tsAccuracy * 100).toFixed(1) }}%
                       </div>
                     </div>
                   </div>
                   <div class="col">
                     <div class="progress">
-                      <div class="progress-bar bg-info" role="progressbar" :style="{ width: (tsHitrateAt3 * 100) + '%' }" :aria-valuenow="tsHitrateAt3 * 100" aria-valuemin="0" aria-valuemax="100">
+                      <div class="progress-bar bg-info" role="progressbar"
+                        :style="{ width: (tsHitrateAt3 * 100) + '%' }" :aria-valuenow="tsHitrateAt3 * 100"
+                        aria-valuemin="0" aria-valuemax="100">
                         Hit Rate: {{ (tsHitrateAt3 * 100).toFixed(1) }}%
                       </div>
                     </div>
@@ -255,7 +258,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Epsilon-Greedy Recommendations -->
           <div class="col-md-6 mb-4">
             <div class="card bg-dark text-white border-warning">
@@ -279,7 +282,8 @@
                         <td>{{ song.track_name }}</td>
                         <td>{{ song.track_artist }}</td>
                         <td>
-                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'" @click="giveFeedback(song.song_id, !song.liked)">
+                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'"
+                            @click="giveFeedback(song.song_id, !song.liked)">
                             <i :class="song.liked ? 'bi bi-hand-thumbs-down' : 'bi bi-hand-thumbs-up'"></i>
                           </button>
                           <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
@@ -295,14 +299,18 @@
                 <div class="row">
                   <div class="col">
                     <div class="progress">
-                      <div class="progress-bar bg-warning" role="progressbar" :style="{ width: (epsilonGreedyAccuracy * 100) + '%' }" :aria-valuenow="epsilonGreedyAccuracy * 100" aria-valuemin="0" aria-valuemax="100">
+                      <div class="progress-bar bg-warning" role="progressbar"
+                        :style="{ width: (epsilonGreedyAccuracy * 100) + '%' }"
+                        :aria-valuenow="epsilonGreedyAccuracy * 100" aria-valuemin="0" aria-valuemax="100">
                         Precision: {{ (epsilonGreedyAccuracy * 100).toFixed(1) }}%
                       </div>
                     </div>
                   </div>
                   <div class="col">
                     <div class="progress">
-                      <div class="progress-bar bg-info" role="progressbar" :style="{ width: (epsilonGreedyHitrateAt3 * 100) + '%' }" :aria-valuenow="epsilonGreedyHitrateAt3 * 100" aria-valuemin="0" aria-valuemax="100">
+                      <div class="progress-bar bg-info" role="progressbar"
+                        :style="{ width: (epsilonGreedyHitrateAt3 * 100) + '%' }"
+                        :aria-valuenow="epsilonGreedyHitrateAt3 * 100" aria-valuemin="0" aria-valuemax="100">
                         Hit Rate: {{ (epsilonGreedyHitrateAt3 * 100).toFixed(1) }}%
                       </div>
                     </div>
@@ -320,13 +328,13 @@
           <div class="col-12">
             <div class="card bg-dark text-white border-danger">
               <div class="card-header bg-danger text-white">
-                <h3><i class="bi bi-heart-fill me-2"></i>Your Liked Songs</h3>
+                <h3><i class="bi bi-heart-fill me-2"></i>Lagu yang disukai</h3>
               </div>
               <div class="card-body">
                 <div v-if="likedSongsList.length === 0" class="text-center py-5">
                   <i class="bi bi-music-note-beamed display-4 text-muted"></i>
-                  <h4 class="mt-3 text-muted">No liked songs yet</h4>
-                  <p class="text-muted">Start liking songs to see them here</p>
+                  <h4 class="mt-3 text-muted">Belum ada lagu yang disukai</h4>
+                  <p class="text-muted">Tekan tombol like untuk mengisi konten</p>
                 </div>
                 <div v-else>
                   <div class="table-responsive">
@@ -366,7 +374,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Music Player -->
       <div v-if="currentSongUri" class="fixed-bottom bg-dark text-white p-3 border-top border-secondary">
         <div class="container">
@@ -389,13 +397,8 @@
           </div>
           <div v-if="showSpotifyPlayer" class="row mt-3">
             <div class="col-12">
-              <iframe 
-                :src="'https://open.spotify.com/embed/track/' + currentSongUri" 
-                width="100%" 
-                height="80" 
-                frameborder="0" 
-                allowtransparency="true" 
-                allow="encrypted-media">
+              <iframe :src="'https://open.spotify.com/embed/track/' + currentSongUri" width="100%" height="80"
+                frameborder="0" allowtransparency="true" allow="encrypted-media">
               </iframe>
             </div>
           </div>
@@ -438,10 +441,10 @@ export default {
   },
   methods: {
     playSong(uri) {
-      const song = [...this.tsRecommendations, ...this.epsilonGreedyRecommendations, ...this.allSongs].find(s => 
+      const song = [...this.tsRecommendations, ...this.epsilonGreedyRecommendations, ...this.allSongs].find(s =>
         s.uri === uri || (s.track_uri && s.track_uri === uri)
       );
-      
+
       if (song) {
         this.currentSongUri = uri.split(':')[2]; // Extract track ID from URI
         this.currentSong = song.track_name || song.song;
@@ -461,103 +464,103 @@ export default {
       this.currentSongUri = '';
     },
     fetchSuggestions() {
-  if (this.searchQuery.length < 2) {
-    this.suggestions = [];
-    return;
-  }
-  axios.get(`http://localhost:5000/search?query=${this.searchQuery}`)
-    .then(response => {
-      // Pastikan data yang diterima memiliki song_id yang valid, bukan hanya URI
-      this.suggestions = response.data.suggestions.map(suggestion => ({
-        ...suggestion,
-        song_id: suggestion.song_id  // Pastikan song_id ada di setiap suggestion
-      }));
-      console.log("Suggestions with song_id:", this.suggestions);  // Debugging untuk memastikan song_id ada
-    })
-    .catch(error => {
-      console.error("Error fetching suggestions:", error);
-    });
-}
-,
-selectSong(song) {
-  // Pastikan untuk memilih berdasarkan song_id, bukan hanya track_name atau uri
-  if (song && song.song_id) {
-    // Cek jika song_id sudah ada di selectedSongs
-    if (!this.selectedSongs.some(s => s.song_id === song.song_id)) {
-      // Menambahkan lagu dengan song_id yang benar
-      this.selectedSongs.push(song);
+      if (this.searchQuery.length < 2) {
+        this.suggestions = [];
+        return;
+      }
+      axios.get(`http://localhost:5000/search?query=${this.searchQuery}`)
+        .then(response => {
+          // Pastikan data yang diterima memiliki song_id yang valid, bukan hanya URI
+          this.suggestions = response.data.suggestions.map(suggestion => ({
+            ...suggestion,
+            song_id: suggestion.song_id  // Pastikan song_id ada di setiap suggestion
+          }));
+          console.log("Suggestions with song_id:", this.suggestions);  // Debugging untuk memastikan song_id ada
+        })
+        .catch(error => {
+          console.error("Error fetching suggestions:", error);
+        });
     }
-    this.searchQuery = '';  // Reset search query
-    this.suggestions = [];  // Reset suggestions
-    console.log("Selected Songs:", this.selectedSongs);  // Debugging
-  } else {
-    console.error("Selected song does not have song_id:", song);
-  }
-}
-,
-addSong() {
-  if (this.searchQuery && this.suggestions.length) {
-    console.log("Adding song based on query:", this.suggestions[0]);
-    this.selectSong(this.suggestions[0]);  // Pilih suggestion pertama
-  }
-}
-,
+    ,
+    selectSong(song) {
+      // Pastikan untuk memilih berdasarkan song_id, bukan hanya track_name atau uri
+      if (song && song.song_id) {
+        // Cek jika song_id sudah ada di selectedSongs
+        if (!this.selectedSongs.some(s => s.song_id === song.song_id)) {
+          // Menambahkan lagu dengan song_id yang benar
+          this.selectedSongs.push(song);
+        }
+        this.searchQuery = '';  // Reset search query
+        this.suggestions = [];  // Reset suggestions
+        console.log("Selected Songs:", this.selectedSongs);  // Debugging
+      } else {
+        console.error("Selected song does not have song_id:", song);
+      }
+    }
+    ,
+    addSong() {
+      if (this.searchQuery && this.suggestions.length) {
+        console.log("Adding song based on query:", this.suggestions[0]);
+        this.selectSong(this.suggestions[0]);  // Pilih suggestion pertama
+      }
+    }
+    ,
     removeSong(index) {
       this.selectedSongs.splice(index, 1);
     },
     fetchRecommendations() {
-  if (this.selectedSongs.length < 3) return;
+      if (this.selectedSongs.length < 3) return;
 
-  // Pastikan selectedSongs memiliki song_id sebelum mengirim
-  const songIds = this.selectedSongs.map(song => song.song_id);  // Ambil song_id dari setiap song dalam selectedSongs
-  console.log("Sending Song IDs:", songIds);  // Debugging untuk memeriksa song_ids yang dikirim
+      // Pastikan selectedSongs memiliki song_id sebelum mengirim
+      const songIds = this.selectedSongs.map(song => song.song_id);  // Ambil song_id dari setiap song dalam selectedSongs
+      console.log("Sending Song IDs:", songIds);  // Debugging untuk memeriksa song_ids yang dikirim
 
-  axios.post('http://localhost:5000/recommend', { song_ids: songIds })
-    .then(response => {
-      // this.cosineRecommendations = response.data.cosine_recommendations.map(song => ({
-      //   ...song,
-      //   liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-      // }));
+      axios.post('http://localhost:5000/recommend', { song_ids: songIds })
+        .then(response => {
+          // this.cosineRecommendations = response.data.cosine_recommendations.map(song => ({
+          //   ...song,
+          //   liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
+          // }));
 
-      this.tsRecommendations = response.data.ts_recommendations.map(song => ({
-        ...song,
-        liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-      }));
+          this.tsRecommendations = response.data.ts_recommendations.map(song => ({
+            ...song,
+            liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
+          }));
 
-      this.epsilonGreedyRecommendations = response.data.epsilon_greedy_recommendations.map(song => ({
-        ...song,
-        liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-      }));
+          this.epsilonGreedyRecommendations = response.data.epsilon_greedy_recommendations.map(song => ({
+            ...song,
+            liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
+          }));
 
-      this.updateAccuracy();
-      this.currentView = 'recommendations';
-      this.showResults = true;
-    })
-    .catch(error => {
-      console.error("Error fetching recommendations:", error);
-    });
-}
-,
-giveFeedback(songId, liked) {
-  axios.post('http://localhost:5000/feedback', { song_id: songId, liked: liked })
-    .then(response => {
-      // 1. Update status like di frontend
-      this.updateLikedStatus(songId, liked);
-      
-      // 2. Update metrik akurasi langsung
-      this.updateAccuracy();
-      
-      // 3. Kirim evaluasi ke backend untuk disimpan
-      this.saveAccuracy();
-      
-      // 4. Refresh daftar lagu yang disukai
-      this.fetchLikedSongs();
-    })
-    .catch(error => {
-      console.error("Error submitting feedback:", error);
-    });
-}
-,
+          this.updateAccuracy();
+          this.currentView = 'recommendations';
+          this.showResults = true;
+        })
+        .catch(error => {
+          console.error("Error fetching recommendations:", error);
+        });
+    }
+    ,
+    giveFeedback(songId, liked) {
+      axios.post('http://localhost:5000/feedback', { song_id: songId, liked: liked })
+        .then(response => {
+          // 1. Update status like di frontend
+          this.updateLikedStatus(songId, liked);
+
+          // 2. Update metrik akurasi langsung
+          this.updateAccuracy();
+
+          // 3. Kirim evaluasi ke backend untuk disimpan
+          this.saveAccuracy();
+
+          // 4. Refresh daftar lagu yang disukai
+          this.fetchLikedSongs();
+        })
+        .catch(error => {
+          console.error("Error submitting feedback:", error);
+        });
+    }
+    ,
     updateLikedStatus(songId, liked) {
       // Update status in recommendations
       [this.cosineRecommendations, this.tsRecommendations, this.epsilonGreedyRecommendations].forEach(recommendations => {
@@ -566,7 +569,7 @@ giveFeedback(songId, liked) {
           song.liked = liked;
         }
       });
-      
+
       // Update likedSongs array
       if (liked) {
         if (!this.likedSongs.includes(songId)) {
@@ -577,50 +580,50 @@ giveFeedback(songId, liked) {
       }
     },
     fetchLikedSongs() {
-  axios.get('http://localhost:5000/feedback')
-    .then(response => {
-      // Filter feedback yang "liked" dan ambil song_id
-      const feedback = response.data.filter(f => f.liked);
-      this.likedSongs = feedback.map(f => f.song_id);
-      
-      this.likedSongsList = feedback.map(f => {
-        return {
-          track_name: f.song_name,
-          track_artist: f.artist_name,
-          playlist_genre: f.playlist_genre, // Asumsi data genre ada di feedback
-          uri: f.uri
-        };
-      });
-      
-    })
-    .catch(error => {
-      console.error("Error fetching liked songs:", error);
-    });
-}
-,
+      axios.get('http://localhost:5000/feedback')
+        .then(response => {
+          // Filter feedback yang "liked" dan ambil song_id
+          const feedback = response.data.filter(f => f.liked);
+          this.likedSongs = feedback.map(f => f.song_id);
+
+          this.likedSongsList = feedback.map(f => {
+            return {
+              track_name: f.track_name,
+              track_artist: f.track_artist,
+              playlist_genre: f.playlist_genre, // Asumsi data genre ada di feedback
+              uri: f.uri
+            };
+          });
+
+        })
+        .catch(error => {
+          console.error("Error fetching liked songs:", error);
+        });
+    }
+    ,
     unlikeSong(song) {
       this.giveFeedback(song.song_id, false); // Use song_id instead of track_name
     },
     updateAccuracy() {
-  axios.get('http://localhost:5000/feedback')
-    .then(response => {
-      const likedSongs = response.data.filter(f => f.liked).map(f => f.song_id);
-      
-      this.tsAccuracy = this.calculatePrecision(this.tsRecommendations, likedSongs);
-      this.epsilonGreedyAccuracy = this.calculatePrecision(this.epsilonGreedyRecommendations, likedSongs);
-      this.tsHitrateAt3 = this.calculateHitrate(this.tsRecommendations.slice(0, 3), likedSongs);
-      this.epsilonGreedyHitrateAt3 = this.calculateHitrate(this.epsilonGreedyRecommendations.slice(0, 3), likedSongs);
-    })
-    .catch(console.error);
-},
-calculatePrecision(recommendations, likedSongs) {
-  const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
-  return relevant.length / recommendations.length;
-},
-calculateHitrate(recommendations, likedSongs) {
-  const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
-  return relevant.length > 0 ? 1 : 0;
-},
+      axios.get('http://localhost:5000/feedback')
+        .then(response => {
+          const likedSongs = response.data.filter(f => f.liked).map(f => f.song_id);
+
+          this.tsAccuracy = this.calculatePrecision(this.tsRecommendations, likedSongs);
+          this.epsilonGreedyAccuracy = this.calculatePrecision(this.epsilonGreedyRecommendations, likedSongs);
+          this.tsHitrateAt3 = this.calculateHitrate(this.tsRecommendations.slice(0, 3), likedSongs);
+          this.epsilonGreedyHitrateAt3 = this.calculateHitrate(this.epsilonGreedyRecommendations.slice(0, 3), likedSongs);
+        })
+        .catch(console.error);
+    },
+    calculatePrecision(recommendations, likedSongs) {
+      const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
+      return relevant.length / recommendations.length;
+    },
+    calculateHitrate(recommendations, likedSongs) {
+      const relevant = recommendations.filter(rec => likedSongs.includes(rec.song_id));
+      return relevant.length > 0 ? 1 : 0;
+    },
     calculateAccuracy(recommendations, feedback) {
       const likedSongs = feedback.filter(f => f.liked).map(f => f.song_id);
       const recommendedLiked = recommendations.filter(rec => likedSongs.includes(rec.song_id));
@@ -730,113 +733,124 @@ calculateHitrate(recommendations, likedSongs) {
 </script>
 
 <style scoped>
-/* Custom styles */
 .bg-dark {
-  background-color: #121212 !important;
+  background-color: #0e0f11 !important;
 }
 
 .bg-secondary {
-  background-color: #1a1a1a !important;
+  background-color: #1b1d20 !important;
+}
+
+.bg-primary {
+  background-color: #5c6ac4 !important;
+}
+
+.bg-deepblue {
+  background-color: #2e3548 !important;
+}
+
+.bg-info {
+  background-color: #4fa3d1 !important;
+}
+
+.bg-warning {
+  background-color: #f3c969 !important;
+}
+
+.bg-success {
+  background-color: #45b29a !important;
+}
+
+.bg-danger {
+  background-color: #f45b69 !important;
 }
 
 .navbar {
   padding: 0.8rem 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .navbar-brand {
   font-weight: 700;
   font-size: 1.5rem;
+  color: #f0f0f0 !important;
 }
 
 .nav-link {
   font-weight: 500;
   transition: all 0.3s ease;
+  color: #cfd8dc !important;
 }
 
-.nav-link:hover, .nav-link.active {
-  color: #fff !important;
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff !important;
   transform: translateY(-2px);
-}
-
-.nav-link i {
-  margin-right: 5px;
-}
-
-.suggestions-dropdown {
-  position: absolute;
-  width: calc(100% - 30px);
-  z-index: 1000;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.suggestions-dropdown .list-group-item {
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.suggestions-dropdown .list-group-item:hover {
-  background-color: #2a2a2a !important;
 }
 
 .card {
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease;
+  background-color: #1b1d20 !important;
 }
 
 .card:hover {
   transform: translateY(-5px);
 }
 
-.table {
-  color: #fff;
+.btn-primary {
+  background-color: #5c6ac4;
+  border-color: #5c6ac4;
 }
 
-.table-hover tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.btn-primary:hover {
+  background-color: #4b59a6;
+  border-color: #4b59a6;
 }
 
-.fixed-bottom {
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-  z-index: 1030;
+.btn-outline-light:hover {
+  color: #212121 !important;
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
 }
 
 .badge {
   font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .accordion-button:not(.collapsed) {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: #fff;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
 }
 
 .accordion-button:focus {
   box-shadow: none;
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: transparent;
 }
 
 .progress {
-  height: 25px;
+  height: 22px;
   border-radius: 5px;
 }
 
 .progress-bar {
   font-weight: 500;
+  font-size: 0.85rem;
 }
 
-.btn-outline-light:hover {
-  color: #121212;
-}
-
-/* Custom scrollbar */
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #1b1d20;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -845,6 +859,6 @@ calculateHitrate(recommendations, likedSongs) {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #5c6ac4;
 }
 </style>
