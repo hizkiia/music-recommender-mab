@@ -109,6 +109,41 @@
         </tbody>
       </table>
     </div>
+    <!-- Section nDCG -->
+    <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
+      <h2 class="section-title">nDCG@K</h2>
+      <table class="metrics-table table table-dark table-hover table-bordered rounded">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Algorithm</th>
+            <th>K=1</th>
+            <th>K=3</th>
+            <th>K=5</th>
+            <th>K=10</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="(userData, username) in evaluations" :key="username">
+            <tr>
+              <td rowspan="2" class="align-middle">{{ username }}</td>
+              <td>Thompson Sampling</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@1']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@3']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@5']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@10']) }}</td>
+            </tr>
+            <tr>
+              <td>Epsilon-Greedy</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@1']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@3']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@5']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@10']) }}</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
     <!-- Summary Charts Section -->
     <div class="summary-charts mb-5">
       <h2 class="text-center mb-4 text-light">Summary Charts</h2>
@@ -134,6 +169,13 @@
           <div class="chart-container bg-secondary p-4 rounded">
             <h4 class="text-center mb-3">HitRate@K</h4>
             <canvas ref="hitRateChart"></canvas>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="chart-container bg-secondary p-4 rounded">
+            <h4 class="text-center mb-3">nDCG@K</h4>
+            <canvas ref="ndcgChart"></canvas>
           </div>
         </div>
       </div>
@@ -191,6 +233,22 @@
             </div>
           </div>
         </div>
+        <!-- Di dalam summary-statistics, tambahkan card untuk nDCG -->
+        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'ndcg' + k">
+          <div class="metric-card bg-gradient-orange rounded p-4">
+            <h5 class="metric-title">nDCG@{{ k }}</h5>
+            <div class="metric-values">
+              <div class="algorithm-metric">
+                <span class="badge bg-primary me-2">TS</span>
+                <span>{{ calculateAverage(`Thompson Sampling_nDCG@K_@${k}`).toFixed(3) }}</span>
+              </div>
+              <div class="algorithm-metric">
+                <span class="badge bg-danger me-2">EG</span>
+                <span>{{ calculateAverage(`Epsilon-Greedy_nDCG@K_@${k}`).toFixed(3) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -210,7 +268,8 @@ export default {
       charts: {
         precision: null,
         map: null,
-        hitRate: null
+        hitRate: null,
+        ndcg: null
       }
     };
   },
@@ -257,6 +316,11 @@ export default {
         type: 'bar',
         data: this.getChartData('HitRate@K', ks, algorithms),
         options: this.getChartOptions('HitRate@K')
+      });
+      this.charts.ndcg = new Chart(this.$refs.ndcgChart, {
+        type: 'bar',
+        data: this.getChartData('nDCG@K', ks, algorithms),
+        options: this.getChartOptions('nDCG@K')
       });
     },
 
@@ -456,5 +520,10 @@ export default {
 
 .bg-gradient-green {
   background: linear-gradient(135deg, #3a3a3a, #1a5a3a);
+}
+
+/* Di dalam style, tambahkan gradient untuk nDCG */
+.bg-gradient-orange {
+  background: linear-gradient(135deg, #3a3a3a, #6b3a1d);
 }
 </style>

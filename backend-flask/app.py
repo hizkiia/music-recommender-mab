@@ -67,9 +67,8 @@ with app.app_context():
 def find_similar_songs(song_ids, top_n=50):
     song_vectors = []
     
-    # Use song_ids instead of song_names to find similar songs
     for song_id in song_ids:
-        matches = spotify_df[spotify_df['song_id'] == song_id]  # Match by song_id, not song_name
+        matches = spotify_df[spotify_df['song_id'] == song_id]  
         if matches.empty:
             continue
         song_vector = matches.iloc[0][features].values
@@ -78,7 +77,6 @@ def find_similar_songs(song_ids, top_n=50):
     if not song_vectors:
         return None
 
-    # Calculate the average vector of the selected songs
     avg_vector = np.mean(song_vectors, axis=0).reshape(1, -1)
     similarity_scores = cosine_similarity(avg_vector, spotify_df[features])[0]
     spotify_df['similarity'] = similarity_scores
@@ -267,29 +265,32 @@ def recommend():
 @app.route('/feedback', methods=['POST'])
 def feedback():
     if 'loggedin' not in session:
-        return jsonify({'message': 'Please log in to provide feedback!'}), 401
+        return jsonify({'message': 'Login untuk memberikan feedback!'}), 401
 
     try:
         data = request.json
-        song_id = data.get('song_id')  # Mengambil song_id, bukan song_name
+        song_id = data.get('song_id')
         liked = data.get('liked')
+        rank = data.get('rank')  # Ambil rank dari request
         
         user_id = session.get('id')
         cursor = mysql.connection.cursor()
+        
         cursor.execute('SELECT * FROM feedback WHERE user_id = %s AND song_id = %s', (user_id, song_id))
         existing_feedback = cursor.fetchone()
         
         if existing_feedback:
-            cursor.execute('UPDATE feedback SET liked = %s WHERE user_id = %s AND song_id = %s', (liked, user_id, song_id))
+            # Update jika sudah ada feedback
+            cursor.execute('UPDATE feedback SET liked = %s, rank = %s WHERE user_id = %s AND song_id = %s', (liked, rank, user_id, song_id))
         else:
-            cursor.execute('INSERT INTO feedback (user_id, song_id, liked) VALUES (%s, %s, %s)', (user_id, song_id, liked))
+            # Simpan feedback baru
+            cursor.execute('INSERT INTO feedback (user_id, song_id, liked, rank) VALUES (%s, %s, %s, %s)', (user_id, song_id, liked, rank))
         
         mysql.connection.commit()
         
         return jsonify({'message': 'Feedback berhasil disimpan'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
     
 @app.route('/feedback', methods=['GET'])
 def get_feedback():
@@ -302,7 +303,8 @@ def get_feedback():
     cursor.execute('''
         SELECT 
             f.song_id,
-            f.liked,  # Pastikan kolom ini ada
+            f.liked,
+            f.rank,  
             s.track_name,
             s.track_artist,
             s.playlist_genre,
@@ -323,13 +325,13 @@ def save_accuracy():
     try:
         data = request.json
         user_id = session.get('id')
-        evaluations = data.get('evaluations')  # ← Expect list of dicts
+        evaluations = data.get('evaluations') 
 
         cursor = mysql.connection.cursor()
 
         for item in evaluations:
-            algorithm = item['algorithm']  # 'Thompson Sampling' / 'Epsilon-Greedy'
-            metric_type = item['metric_type']  # 'Precision@K', 'MAP@K', 'HitRate@K'
+            algorithm = item['algorithm']  
+            metric_type = item['metric_type']  
             k_value = item['k']
             score = item['score']
 
