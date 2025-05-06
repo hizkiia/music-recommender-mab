@@ -241,7 +241,8 @@ def recommend():
             'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
             'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
-            'score': score
+            'score': score,
+             'relevance_ts': 0
         } for song_id, score in ts_recommendations]
 
         eg_recommendations = [{
@@ -249,7 +250,8 @@ def recommend():
             'track_name': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_name'].values[0],
             'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
-            'score': score
+            'score': score,
+             'relevance_eg': 0
         } for song_id, score in eg_recommendations]
 
         return jsonify({
@@ -261,7 +263,6 @@ def recommend():
         print("🔥 Error in /recommend:", str(e))
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/feedback', methods=['POST'])
 def feedback():
     if 'loggedin' not in session:
@@ -271,23 +272,35 @@ def feedback():
         data = request.json
         song_id = data.get('song_id')
         liked = data.get('liked')
-        rank = data.get('rank')  # Ambil rank dari request
-        
+        relevance_ts = data.get('relevance_ts')  # New field for Thompson Sampling
+        relevance_eg = data.get('relevance_eg')  # New field for Epsilon-Greedy
+
         user_id = session.get('id')
         cursor = mysql.connection.cursor()
         
-        cursor.execute('SELECT * FROM feedback WHERE user_id = %s AND song_id = %s', (user_id, song_id))
+        # Check if feedback exists
+        cursor.execute('SELECT * FROM feedback WHERE user_id = %s AND song_id = %s', 
+                      (user_id, song_id))
         existing_feedback = cursor.fetchone()
         
         if existing_feedback:
-            # Update jika sudah ada feedback
-            cursor.execute('UPDATE feedback SET liked = %s, rank = %s WHERE user_id = %s AND song_id = %s', (liked, rank, user_id, song_id))
+            # Update existing feedback with new relevance values
+            cursor.execute('''
+                UPDATE feedback 
+                SET liked = %s, 
+                    relevance_ts = COALESCE(%s, relevance_ts),
+                    relevance_eg = COALESCE(%s, relevance_eg)
+                WHERE user_id = %s AND song_id = %s
+            ''', (liked, relevance_ts, relevance_eg, user_id, song_id))
         else:
-            # Simpan feedback baru
-            cursor.execute('INSERT INTO feedback (user_id, song_id, liked, rank) VALUES (%s, %s, %s, %s)', (user_id, song_id, liked, rank))
+            # Insert new feedback with relevance values
+            cursor.execute('''
+                INSERT INTO feedback 
+                (user_id, song_id, liked, relevance_ts, relevance_eg) 
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, song_id, liked, relevance_ts, relevance_eg))
         
         mysql.connection.commit()
-        
         return jsonify({'message': 'Feedback berhasil disimpan'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -304,7 +317,9 @@ def get_feedback():
         SELECT 
             f.song_id,
             f.liked,
-            f.rank,  
+            f.relevance_ts,
+            f.relevance_eg,
+                   f.updated_at,  
             s.track_name,
             s.track_artist,
             s.playlist_genre,

@@ -212,10 +212,10 @@
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Song</th>
-                        <th>Artist</th>
-                        <th>Actions</th>
-                        <th>Your Rank</th>
+                        <th>Judul</th>
+                        <th>Artis</th>
+                        <th>Aksi</th>
+                        <th>Relevansi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -233,8 +233,8 @@
                           </button>
                         </td>
                         <td>
-                          <select class="form-select" v-model="song.rank" @change="submitRank(song)">
-                            <option v-for="n in 10" :key="n" :value="n">{{ n }}</option>
+                          <select class="form-select" v-model="song.relevance_ts" @change="submitRank(song, 'ts')">
+                            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
                       </tr>
@@ -253,15 +253,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col">
-                    <div class="progress">
-                      <div class="progress-bar bg-info" role="progressbar"
-                        :style="{ width: (tsHitrateAt3 * 100) + '%' }" :aria-valuenow="tsHitrateAt3 * 100"
-                        aria-valuemin="0" aria-valuemax="100">
-                        Hit Rate: {{ (tsHitrateAt3 * 100).toFixed(1) }}%
-                      </div>
-                    </div>
-                  </div>
+
                 </div>
                 <button class="btn btn-primary" @click="submitFeedback('ts')">
                   <i class="bi bi-save me-1"></i> Submit Feedback
@@ -282,11 +274,10 @@
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Song</th>
-                        <th>Artist</th>
-                        <th>Actions</th>
-                        <th>Your Rank</th>
-
+                        <th>Judul</th>
+                        <th>Artis</th>
+                        <th>Aksi</th>
+                        <th>Relevansi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -304,8 +295,8 @@
                           </button>
                         </td>
                         <td>
-                          <select class="form-select" v-model="song.rank" @change="submitRank(song)">
-                            <option v-for="n in 10" :key="n" :value="n">{{ n }}</option>
+                          <select class="form-select" v-model="song.relevance_eg" @change="submitRank(song, 'eg')">
+                            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
                       </tr>
@@ -433,19 +424,19 @@
 
 <script>
 import axios from 'axios';
+import { toast } from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
 
 export default {
   data() {
     return {
       searchQuery: '',
       suggestions: [],
-      selectedSongs: [],  // Store song_id instead of track_name
-      cosineRecommendations: [],
+      selectedSongs: [],
       tsRecommendations: [],
       epsilonGreedyRecommendations: [],
       tsAccuracy: 0,
       epsilonGreedyAccuracy: 0,
-      tsHitrateAt3: 0,
       epsilonGreedyHitrateAt3: 0,
       isPlaying: false,
       isPaused: false,
@@ -456,9 +447,9 @@ export default {
       currentView: 'home',
       likedSongs: [],
       likedSongsList: [],
+      allFeedback: [], // Store all feedback data including relevance
       allSongs: [],
       allSongsByGenre: {},
-      genres: ['pop', 'rock', 'rap', 'latin', 'r&b', 'edm'],
       showResults: false,
       showSpotifyPlayer: false
     };
@@ -470,16 +461,18 @@ export default {
       );
 
       if (song) {
-        this.currentSongUri = uri.split(':')[2]; // Extract track ID from URI
+        this.currentSongUri = uri.split(':')[2];
         this.currentSong = song.track_name || song.song;
         this.currentArtist = song.track_artist || song.artist;
         this.isPlaying = true;
         this.isPaused = false;
       }
     },
+
     togglePlay() {
       this.isPaused = !this.isPaused;
     },
+
     stopPlayback() {
       this.isPlaying = false;
       this.isPaused = false;
@@ -487,6 +480,7 @@ export default {
       this.currentArtist = '';
       this.currentSongUri = '';
     },
+
     fetchSuggestions() {
       if (this.searchQuery.length < 2) {
         this.suggestions = [];
@@ -494,91 +488,63 @@ export default {
       }
       axios.get(`http://localhost:5000/search?query=${this.searchQuery}`)
         .then(response => {
-          // Pastikan data yang diterima memiliki song_id yang valid, bukan hanya URI
           this.suggestions = response.data.suggestions.map(suggestion => ({
             ...suggestion,
-            song_id: suggestion.song_id  // Pastikan song_id ada di setiap suggestion
+            song_id: suggestion.song_id
           }));
-          console.log("Suggestions with song_id:", this.suggestions);  // Debugging untuk memastikan song_id ada
         })
         .catch(error => {
           console.error("Error fetching suggestions:", error);
         });
-    }
-    ,
+    },
+
     selectSong(song) {
-      // Pastikan untuk memilih berdasarkan song_id, bukan hanya track_name atau uri
       if (song && song.song_id) {
-        // Cek jika song_id sudah ada di selectedSongs
         if (!this.selectedSongs.some(s => s.song_id === song.song_id)) {
-          // Menambahkan lagu dengan song_id yang benar
           this.selectedSongs.push(song);
         }
-        this.searchQuery = '';  // Reset search query
-        this.suggestions = [];  // Reset suggestions
-        console.log("Selected Songs:", this.selectedSongs);  // Debugging
+        this.searchQuery = '';
+        this.suggestions = [];
       } else {
         console.error("Selected song does not have song_id:", song);
       }
-    }
-    , submitFeedback(algorithm) {
-      // Tentukan rekomendasi mana yang akan diproses
-      const recommendations = algorithm === 'ts' ? this.tsRecommendations : this.epsilonGreedyRecommendations;
-
-      // Kirim feedback untuk setiap lagu
-      const promises = recommendations.map(song => {
-        return axios.post('http://localhost:5000/feedback', {
-          song_id: song.song_id,
-          liked: song.liked,
-          rank: song.rank || 5 // Default rank 5 jika tidak diisi
-        });
-      });
-
-      // Jalankan semua request secara paralel
-      Promise.all(promises)
-        .then(() => {
-          alert('Feedback berhasil disimpan!');
-          this.updateAccuracy(); // Perbarui metrik akurasi
-          this.saveAccuracy();  // Simpan metrik evaluasi
-        })
-        .catch(error => {
-          console.error("Error submitting feedback:", error);
-          alert('Gagal menyimpan feedback');
-        });
     },
+
     addSong() {
       if (this.searchQuery && this.suggestions.length) {
-        console.log("Adding song based on query:", this.suggestions[0]);
-        this.selectSong(this.suggestions[0]);  // Pilih suggestion pertama
+        this.selectSong(this.suggestions[0]);
       }
-    }
-    ,
+    },
+
     removeSong(index) {
       this.selectedSongs.splice(index, 1);
     },
+
     fetchRecommendations() {
       if (this.selectedSongs.length < 3) return;
 
-      // Pastikan selectedSongs memiliki song_id sebelum mengirim
-      const songIds = this.selectedSongs.map(song => song.song_id);  // Ambil song_id dari setiap song dalam selectedSongs
-      console.log("Sending Song IDs:", songIds);  // Debugging untuk memeriksa song_ids yang dikirim
+      const songIds = this.selectedSongs.map(song => song.song_id);
 
       axios.post('http://localhost:5000/recommend', { song_ids: songIds })
         .then(response => {
-          // this.cosineRecommendations = response.data.cosine_recommendations.map(song => ({
-          //   ...song,
-          //   liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-          // }));
+          // Initialize recommendations with relevance values from feedback if they exist
+          this.tsRecommendations = response.data.ts_recommendations.map(song => {
+            const feedback = this.allFeedback.find(f => f.song_id === song.song_id);
+            return {
+              ...song,
+              relevance_ts: feedback ? feedback.relevance_ts : 0,
+              liked: this.likedSongs.includes(song.song_id)
+            };
+          });
 
-          this.tsRecommendations = response.data.ts_recommendations.map(song => ({
-            ...song,
-            liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-          }));
-
-          this.epsilonGreedyRecommendations = response.data.epsilon_greedy_recommendations.map(song => ({
-            ...song,
-            liked: this.likedSongs.includes(song.song_id)  // Feedback berdasarkan song_id
-          }));
+          this.epsilonGreedyRecommendations = response.data.epsilon_greedy_recommendations.map(song => {
+            const feedback = this.allFeedback.find(f => f.song_id === song.song_id);
+            return {
+              ...song,
+              relevance_eg: feedback ? feedback.relevance_eg : 0,
+              liked: this.likedSongs.includes(song.song_id)
+            };
+          });
 
           this.updateAccuracy();
           this.currentView = 'recommendations';
@@ -587,32 +553,83 @@ export default {
         .catch(error => {
           console.error("Error fetching recommendations:", error);
         });
-    }
-    ,
-    addLikedSongs(songId, liked) {
-      axios.post('http://localhost:5000/feedback', { song_id: songId, liked: liked })
-        .then(response => {
+    },
+
+    submitRank(song, algorithm) {
+      const data = {
+        song_id: song.song_id,
+        liked: song.liked
+      };
+
+      // Add the correct relevance field based on algorithm
+      if (algorithm === 'ts') {
+        data.relevance_ts = song.relevance_ts;
+      } else if (algorithm === 'eg') {
+        data.relevance_eg = song.relevance_eg;
+      }
+
+      axios.post('http://localhost:5000/feedback', data, { withCredentials: true })
+        .then(() => {
+          toast.success(`Feedback untuk ${song.track_name} disimpan`);
+          this.updateAccuracy();
+        })
+        .catch(error => {
+          console.error("Error saving feedback:", error);
+          toast.error("Gagal menyimpan feedback");
+        });
+    },
+
+    // Remove submitFeedback method if not needed, or implement it:
+    submitFeedback(algorithm) {
+      const recommendations = algorithm === 'ts'
+        ? this.tsRecommendations
+        : this.epsilonGreedyRecommendations;
+
+      const promises = recommendations.map(song => {
+        const data = {
+          song_id: song.song_id,
+          liked: song.liked
+        };
+
+        if (algorithm === 'ts') {
+          data.relevance_ts = song.relevance_ts;
+        } else {
+          data.relevance_eg = song.relevance_eg;
+        }
+
+        return axios.post('http://localhost:5000/feedback', data, { withCredentials: true });
+      });
+
+      Promise.all(promises)
+        .then(() => {
+          toast.success('Feedback berhasil disimpan!');
+          this.updateAccuracy();
+          this.saveAccuracy();
+        })
+        .catch(error => {
+          console.error("Error submitting feedback:", error);
+          toast.error('Gagal menyimpan feedback');
+        });
+    },
+
+    giveFeedback(songId, liked) {
+      axios.post('http://localhost:5000/feedback', {
+        song_id: songId,
+        liked: liked
+      }, { withCredentials: true })
+        .then(() => {
           this.updateLikedStatus(songId, liked);
           this.fetchLikedSongs();
+          this.updateAccuracy();
         })
         .catch(error => {
           console.error("Error submitting feedback:", error);
         });
     },
-    submitRank(song) {
-      console.log(`Rank ${song.rank} dipilih untuk lagu ${song.track_name}`);
-    },
-    giveFeedback(songId, liked) {
-      // Update status like di frontend saja
-      this.updateLikedStatus(songId, liked);
 
-      // Update metrik akurasi langsung
-      this.updateAccuracy();
-    }
-    ,
     updateLikedStatus(songId, liked) {
       // Update status in recommendations
-      [this.cosineRecommendations, this.tsRecommendations, this.epsilonGreedyRecommendations].forEach(recommendations => {
+      [this.tsRecommendations, this.epsilonGreedyRecommendations].forEach(recommendations => {
         const song = recommendations.find(song => song.song_id === songId);
         if (song) {
           song.liked = liked;
@@ -628,48 +645,44 @@ export default {
         this.likedSongs = this.likedSongs.filter(id => id !== songId);
       }
     },
-    fetchLikedSongs() {
-      axios.get('http://localhost:5000/feedback')
-        .then(response => {
-          // Simpan seluruh data lagu yang disukai
-          const feedback = response.data.filter(song => song.liked);
-          this.likedSongsList = feedback.map(song => ({
-            song_id: song.song_id,
-            track_name: song.track_name,
-            track_artist: song.track_artist,
-            playlist_genre: song.playlist_genre,
-            uri: song.uri
-          }));
-          this.likedSongs = feedback.map(song => song.song_id);
 
-          // Simpan hanya song_id untuk pengecekan like
-          // this.likedSongs = response.data.map(song => song.song_id);
+    fetchLikedSongs() {
+      axios.get('http://localhost:5000/feedback', { withCredentials: true })
+        .then(response => {
+          this.allFeedback = response.data; // Store all feedback data
+
+          this.likedSongsList = response.data
+            .filter(song => song.liked)
+            .map(song => ({
+              song_id: song.song_id,
+              track_name: song.track_name,
+              track_artist: song.track_artist,
+              playlist_genre: song.playlist_genre,
+              uri: song.uri
+            }));
+
+          this.likedSongs = response.data
+            .filter(song => song.liked)
+            .map(song => song.song_id);
         })
         .catch(error => {
           console.error("Error fetching liked songs:", error);
         });
-    }
-    ,
-    unlikeSong(song) {
-      this.giveFeedback(song.song_id, false); // Use song_id instead of track_name
     },
+
     unlikeLikedSong(song) {
-      this.addLikedSongs(song.song_id, false);
-      this.likedSongsList = this.likedSongsList.filter(s => s.song_id !== song.song_id);
-      this.likedSongs = this.likedSongs.filter(id => id !== song.song_id);
+      this.giveFeedback(song.song_id, false);
     },
+
     updateAccuracy() {
-      axios.get('http://localhost:5000/feedback')
+      axios.get('http://localhost:5000/feedback', { withCredentials: true })
         .then(response => {
-          // Filter hanya lagu yang disukai (liked=1)
           const likedSongs = response.data
-            .filter(feedback => feedback.liked === 1 || feedback.liked === true)
+            .filter(feedback => feedback.liked)
             .map(feedback => feedback.song_id);
 
-          // Hitung metrik
           this.tsAccuracy = this.calculatePrecision(this.tsRecommendations, likedSongs);
           this.epsilonGreedyAccuracy = this.calculatePrecision(this.epsilonGreedyRecommendations, likedSongs);
-          this.tsHitrateAt3 = this.calculateHitrate(this.tsRecommendations.slice(0, 3), likedSongs);
           this.epsilonGreedyHitrateAt3 = this.calculateHitrate(this.epsilonGreedyRecommendations.slice(0, 3), likedSongs);
         })
         .catch(error => {
@@ -688,64 +701,39 @@ export default {
       const hits = recommendations.filter(rec => likedSongs.includes(rec.song_id)).length;
       return hits > 0 ? 1 : 0;
     },
-    // calculateNDCGAtK(recommendations, relevantSongs, k = 10) {
-    //   const sortedRecommendations = recommendations.slice(0, k).sort((a, b) => a.rank - b.rank);
 
-    //   const dcg = sortedRecommendations.reduce((acc, song, idx) => {
-    //     const relevance = relevantSongs.includes(song.song_id) ? 1 : 0;
-    //     return acc + relevance / Math.log2(idx + 2);
-    //   }, 0);
-
-    //   const idcg = relevantSongs.slice(0, k).reduce((acc, song_id, idx) => {
-    //     return acc + 1 / Math.log2(idx + 2);
-    //   }, 0);
-
-    //   return dcg / idcg || 0;
-    // },
-
-    // submitEvaluationMetrics() {
-    //   const relevantSongs = this.likedSongs;
-    //   const recommendations = [...this.tsRecommendations, ...this.epsilonGreedyRecommendations];
-
-    //   const tsNDCG = this.calculateNDCGAtK(this.tsRecommendations, relevantSongs, 10);
-    //   const egNDCG = this.calculateNDCGAtK(this.epsilonGreedyRecommendations, relevantSongs, 10);
-
-    //   const evaluations = [
-    //     ...this.buildEvaluationData("ThompsonSampling", this.tsRecommendations),
-    //     ...this.buildEvaluationData("EpsilonGreedy", this.epsilonGreedyRecommendations),
-    //     { algorithm: "ThompsonSampling", metric_type: "nDCG@10", k: 10, score: tsNDCG },
-    //     { algorithm: "EpsilonGreedy", metric_type: "nDCG@10", k: 10, score: egNDCG },
-    //   ];
-
-    //   axios.post('http://localhost:5000/save_accuracy', { evaluations })
-    //     .then(response => {
-    //       console.log("Evaluation metrics saved successfully", response.data);
-    //     })
-    //     .catch(error => {
-    //       console.error("Error saving evaluation metrics:", error);
-    //     });
-    // },
     saveAccuracy() {
-      axios.get('http://localhost:5000/feedback')
+      axios.get('http://localhost:5000/feedback', { withCredentials: true })
         .then(response => {
           const feedback = response.data;
           const likedSongs = feedback.filter(f => f.liked).map(f => f.song_id);
 
-          // Fungsi untuk menghitung nDCG@K
-          const calculateNDCGAtK = (recommendations, relevantSongs, k = 10) => {
-            const sortedRecommendations = recommendations.slice(0, k).sort((a, b) => a.rank - b.rank);
+          const calculateNDCGAtK = (recommendations, feedbackData, algoName, k = 10) => {
+            const getRelevance = (song_id) => {
+              const feedbackItem = feedbackData.find(f => f.song_id === song_id);
+              if (!feedbackItem) return 0;
 
-            const dcg = sortedRecommendations.reduce((acc, song, idx) => {
-              const relevance = relevantSongs.includes(song.song_id) ? 1 : 0;  // Relevance = 1 if the song is liked
-              return acc + relevance / Math.log2(idx + 2);  // DCG formula
+              if (algoName === "Thompson Sampling") {
+                return feedbackItem.relevance_ts || 0;
+              } else if (algoName === "Epsilon-Greedy") {
+                return feedbackItem.relevance_eg || 0;
+              }
+              return 0;
+            };
+
+            const dcg = recommendations.slice(0, k).reduce((acc, song, idx) => {
+              const relevance = getRelevance(song.song_id);
+              return acc + relevance / Math.log2(idx + 2);
             }, 0);
 
-            const idcg = relevantSongs.slice(0, k).reduce((acc, song_id, idx) => {
-              return acc + 1 / Math.log2(idx + 2);  // Perfect ranking gives all relevance as 1
+            const idealRelevance = [5, 5, 4, 4, 3, 3, 2, 2, 1, 1];
+            const idcg = idealRelevance.slice(0, k).reduce((acc, relevance, idx) => {
+              return acc + relevance / Math.log2(idx + 2);
             }, 0);
 
-            return dcg / idcg || 0;  // Return nDCG, avoid division by zero
+            return dcg / idcg || 0;
           };
+
           const buildEvaluations = (algoName, recommendations) => {
             const evals = [];
             [1, 3, 5, 10].forEach(k => {
@@ -755,20 +743,18 @@ export default {
               const precision = relevant.length / k;
               const hitrate = relevant.length > 0 ? 1 : 0;
 
-              // Menghitung MAP@K
               const map = relevant.reduce((acc, song, idx) => {
                 const hitCount = relevant.slice(0, idx + 1).length;
                 return acc + hitCount / (idx + 1);
               }, 0) / likedSongs.length || 0;
 
-              // Menghitung nDCG@K
-              const ndcg = calculateNDCGAtK(topK, likedSongs, k);
+              const ndcg = calculateNDCGAtK(topK, feedback, algoName, k);
 
               evals.push(
                 { algorithm: algoName, metric_type: "Precision@K", k: k, score: precision },
                 { algorithm: algoName, metric_type: "HitRate@K", k: k, score: hitrate },
                 { algorithm: algoName, metric_type: "MAP@K", k: k, score: map },
-                { algorithm: algoName, metric_type: "nDCG@K", k: k, score: ndcg }  // Menambahkan nDCG@K
+                { algorithm: algoName, metric_type: "nDCG@K", k: k, score: ndcg }
               );
             });
             return evals;
@@ -788,88 +774,33 @@ export default {
           console.error("Error saving accuracy:", error);
         });
     },
-    // , calculateNDCGAtK(recommendations, relevantSongs, k = 10) {
-    //   // Sort the recommendations by rank (lower rank number means higher relevance)
-    //   const sortedRecommendations = recommendations.slice(0, k).sort((a, b) => a.rank - b.rank);
 
-    //   // Calculate DCG@k
-    //   const dcg = sortedRecommendations.reduce((acc, song, idx) => {
-    //     const relevance = relevantSongs.includes(song.song_id) ? 1 : 0;  // Relevance is 1 if the song is liked
-    //     return acc + relevance / Math.log2(idx + 2);  // DCG formula
-    //   }, 0);
-
-    //   // Calculate IDCG@k (Ideal DCG, assuming the most relevant items are ranked at the top)
-    //   const idcg = relevantSongs.slice(0, k).reduce((acc, song_id, idx) => {
-    //     return acc + 1 / Math.log2(idx + 2);  // Perfect ranking gives all relevance as 1
-    //   }, 0);
-
-    //   // Return NDCG@k (Normalized DCG)
-    //   return dcg / idcg || 0;  // Avoid division by zero
-    // },
-
-    // // Handle the submission of feedback including NDCG
-    // submitEvaluationMetrics() {
-    //   // Collect the recommendations and relevant songs (liked songs)
-    //   const relevantSongs = this.likedSongs;  // List of song_ids that the user liked
-    //   const recommendations = [...this.tsRecommendations, ...this.epsilonGreedyRecommendations];
-
-    //   // Calculate NDCG for Thompson Sampling and Epsilon-Greedy
-    //   const tsNDCG = this.calculateNDCGAtK(this.tsRecommendations, relevantSongs, 10);
-    //   const egNDCG = this.calculateNDCGAtK(this.epsilonGreedyRecommendations, relevantSongs, 10);
-
-    //   // Now we create the evaluations object to send to the backend
-    //   const evaluations = [
-    //     ...this.buildEvaluationData("ThompsonSampling", this.tsRecommendations),
-    //     ...this.buildEvaluationData("EpsilonGreedy", this.epsilonGreedyRecommendations),
-    //     { algorithm: "ThompsonSampling", metric_type: "NDCG@10", k: 10, score: tsNDCG },
-    //     { algorithm: "EpsilonGreedy", metric_type: "NDCG@10", k: 10, score: egNDCG },
-    //   ];
-
-    //   // Send the evaluations to the backend
-    //   axios.post('http://localhost:5000/save_accuracy', { evaluations })
-    //     .then(response => {
-    //       console.log("Evaluation metrics saved successfully", response.data);
-    //     })
-    //     .catch(error => {
-    //       console.error("Error saving evaluation metrics:", error);
-    //     });
-    // },
     showHome() {
       this.currentView = 'home';
       this.showResults = false;
     },
+
     showRecommendations() {
       this.currentView = 'recommendations';
       this.showResults = false;
     },
+
     showLikedSongs() {
       this.currentView = 'liked';
       this.fetchLikedSongs();
     },
+
     logout() {
-      axios.post('http://localhost:5000/logout')
-        .then(response => {
-          if (response.status === 200) {
-            this.$router.push('/login');
-          }
+      axios.post('http://localhost:5000/logout', {}, { withCredentials: true })
+        .then(() => {
+          this.$router.push('/login');
         })
         .catch(error => {
           console.error("Error logging out:", error);
         });
     },
-    getSongsByGenre(genre) {
-      return this.allSongsByGenre[genre] || [];
-    },
-    fetchAllSongs() {
-      axios.get('http://localhost:5000/search?query=')
-        .then(response => {
-          this.allSongs = response.data.suggestions || [];
-        })
-        .catch(error => {
-          console.error("Error fetching all songs:", error);
-        });
-    }
-    , fetchAllSongsByGenre() {
+
+    fetchAllSongsByGenre() {
       axios.get('http://localhost:5000/all-songs-by-genre')
         .then(response => {
           this.allSongsByGenre = response.data;
@@ -880,15 +811,12 @@ export default {
     }
   },
   created() {
-
-    axios.get('http://localhost:5000/profile')
+    axios.get('http://localhost:5000/profile', { withCredentials: true })
       .then(response => {
         if (response.status === 200) {
           this.username = response.data.message.split(' ')[1];
           this.fetchLikedSongs();
-          this.fetchAllSongs();
           this.fetchAllSongsByGenre();
-
         } else {
           this.$router.push('/login');
         }
@@ -898,9 +826,7 @@ export default {
         this.$router.push('/login');
       });
   }
-
 };
-
 </script>
 
 <style scoped>
