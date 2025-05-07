@@ -47,22 +47,13 @@ with app.app_context():
     spotify_df, features = load_songs_from_db()
 
 
-# # Load dataset high popularity
-# high_popularity_df = pd.read_csv('high_popularity_spotify_data.csv')
+def get_feedback_from_db(user_id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("SELECT song_id, liked FROM feedback WHERE user_id = %s", (user_id,))
+    feedback = cursor.fetchall()
+    cursor.close()
+    return feedback
 
-# # Load dataset low popularity
-# low_popularity_df = pd.read_csv('low_popularity_spotify_data.csv')
-
-# # Menggabungkan kedua dataset
-# spotify_df = pd.concat([high_popularity_df, low_popularity_df], ignore_index=True)
-
-# # Pilih fitur numerik untuk cosine similarity
-# features = ['energy', 'tempo', 'danceability', 'loudness', 'valence', 'speechiness', 'instrumentalness', 'acousticness', 'key', 'duration_ms']
-# scaler = StandardScaler()
-# spotify_df[features] = scaler.fit_transform(spotify_df[features])
-
-# spotify_df.dropna(inplace=True)
-# spotify_df.drop_duplicates(inplace=True)
 
 def find_similar_songs(song_ids, top_n=50):
     song_vectors = []
@@ -90,76 +81,78 @@ def find_similar_songs(song_ids, top_n=50):
     return similar_songs[['song_id', 'track_name', 'track_artist', 'uri', 'similarity']].head(top_n)
 
 class EpsilonGreedyRecommender:
-    def __init__(self, songs, epsilon=0.2):
+    def __init__(self, songs, epsilon=0.1, n_iter=100):
         self.songs = songs
         self.epsilon = epsilon
-        # Inisialisasi rewards berdasarkan song_id
+        self.n_iter = n_iter
         self.rewards = {song['song_id']: song['similarity'] for _, song in self.songs.iterrows()}
-        self.likes = {song['song_id']: 0 for _, song in self.songs.iterrows()}  # Total like (dari feedback)
-
-    def select_top_songs(self, top_n=10):
-        # Pilih top 10 berdasarkan reward tertinggi
-        sorted_songs = sorted(self.rewards, key=self.rewards.get, reverse=True)[:top_n]
-        
-        # Mengembalikan daftar lagu dengan song_id dan reward-nya
-        return [(song_id, self.rewards[song_id]) for song_id in sorted_songs]
+        self.counts = {song['song_id']: 1 for _, song in self.songs.iterrows()}
+        self.likes = {song['song_id']: 0 for _, song in self.songs.iterrows()}
 
     def update_feedback(self, song_id, liked):
-        # Update reward dan like berdasarkan feedback song_id
         if liked:
             self.rewards[song_id] += 1
-        self.likes[song_id] += 1
+        self.counts[song_id] += 1
+        self.likes[song_id] += liked
 
-class ThompsonSamplingRecommender:
-    def __init__(self, songs):
-        self.songs = songs
-        # Inisialisasi alpha dan beta untuk song_id
-        self.alpha = {song['song_id']: song['similarity'] + 1 for _, song in self.songs.iterrows()}
-        self.beta = {song['song_id']: 1 for _, song in self.songs.iterrows()}
+    def apply_historical_feedback(self, feedback_data):
+        for record in feedback_data:
+            song_id = record['song_id']
+            liked = record['liked']
+            if song_id in self.rewards:
+                self.update_feedback(song_id, liked)
+
+    def warmup(self):
+        for _ in range(self.n_iter):
+            if np.random.random() < self.epsilon:
+                song_id = np.random.choice(self.songs['song_id'])
+            else:
+                song_id = max(self.rewards.items(), key=lambda x: x[1])[0]
+            self.update_feedback(song_id, liked=np.random.random() > 0.5)
 
     def select_top_songs(self, top_n=10):
-        # Ambil sampel dari distribusi Beta untuk setiap song_id
-        samples = {song_id: np.random.beta(self.alpha[song_id], self.beta[song_id]) for song_id in self.songs['song_id']}
-        
-        # Ambil top 10 song_id dengan nilai sampel tertinggi
-        top_songs = sorted(samples, key=samples.get, reverse=True)[:top_n]
-        
-        # Mengembalikan daftar song_id dan nilai sampelnya
-        return [(song_id, samples[song_id]) for song_id in top_songs]
+        self.warmup()
+        sorted_songs = sorted(self.rewards, key=self.rewards.get, reverse=True)[:top_n]
+        return [(song_id, self.rewards[song_id]) for song_id in sorted_songs]
+
+class ThompsonSamplingRecommender:
+    def __init__(self, songs, n_iter=100):
+        self.songs = songs
+        self.n_iter = n_iter  # Jumlah iterasi
+        self.alpha = {song['song_id']: song['similarity'] + 1 for _, song in self.songs.iterrows()}
+        self.beta = {song['song_id']: 1 for _, song in self.songs.iterrows()}
+        self.successes = {song['song_id']: 0 for _, song in self.songs.iterrows()}
+        self.trials = {song['song_id']: 0 for _, song in self.songs.iterrows()}
 
     def update_feedback(self, song_id, liked):
-        # Update alpha dan beta berdasarkan feedback song_id
         if liked:
             self.alpha[song_id] += 1
+            self.successes[song_id] += 1
         else:
             self.beta[song_id] += 1
+        self.trials[song_id] += 1
 
+    def apply_historical_feedback(self, feedback_data):
+        for record in feedback_data:
+            song_id = record['song_id']
+            liked = record['liked']
+            if song_id in self.alpha:
+                self.update_feedback(song_id, liked)
 
-# def calculate_precision_at_k(recommendations, feedback, k):
-#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-#     top_k_recommendations = recommendations[:k]
-#     hits = [rec for rec in top_k_recommendations if rec in liked_songs]
-#     precision = len(hits) / k if k > 0 else 0
-#     return precision
+    def warmup(self):
+        for _ in range(self.n_iter):
+            samples = {song_id: np.random.beta(self.alpha[song_id], self.beta[song_id]) 
+                       for song_id in self.songs['song_id']}
+            song_id = max(samples.items(), key=lambda x: x[1])[0]
+            self.update_feedback(song_id, liked=np.random.random() > 0.5)
 
-# def calculate_average_precision_at_k(recommendations, feedback, k):
-#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-#     hits = 0
-#     sum_precisions = 0
-#     for i, rec in enumerate(recommendations[:k]):
-#         if rec in liked_songs:
-#             hits += 1
-#             sum_precisions += hits / (i + 1)
-#     average_precision = sum_precisions / len(liked_songs) if liked_songs else 0
-#     return average_precision
-
-# def calculate_hitrate_at_k(recommendations, feedback, k):
-#     liked_songs = feedback[feedback['liked'] > 0].song_name.tolist()
-#     top_k_recommendations = recommendations[:k]
-#     hits = [rec for rec in top_k_recommendations if rec in liked_songs]
-#     hitrate = 1 if len(hits) > 0 else 0
-#     return hitrate
-
+    def select_top_songs(self, top_n=10):
+        self.warmup()
+        samples = {song_id: np.random.beta(self.alpha[song_id], self.beta[song_id]) 
+                   for song_id in self.songs['song_id']}
+        top_songs = sorted(samples, key=samples.get, reverse=True)[:top_n]
+        return [(song_id, samples[song_id]) for song_id in top_songs]
+    
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -216,23 +209,30 @@ def recommend():
         return jsonify({'message': 'Please log in to get recommendations!'}), 401
 
     try:
+        user_id = session['id']  # ambil ID user dari session
         data = request.json
         song_ids = data.get('song_ids', [])
-
-        print("🎵 Song IDs received:", song_ids)  # Debugging
         
         if not song_ids:
             return jsonify({'error': 'song_ids is required and cannot be empty'}), 400
 
-        # Proses rekomendasi dengan song_ids
         similar_songs = find_similar_songs(song_ids)
         if similar_songs is None or similar_songs.empty:
             return jsonify({'error': 'No similar songs found. Try another input.'}), 404
 
-        ts_model = ThompsonSamplingRecommender(similar_songs)
-        ts_recommendations = ts_model.select_top_songs()
+        # Ambil data feedback user dari database
+        feedback_data = get_feedback_from_db(user_id)
 
-        eg_model = EpsilonGreedyRecommender(similar_songs)
+        # Inisialisasi model dengan lagu yang mirip
+        ts_model = ThompsonSamplingRecommender(similar_songs, n_iter=100)
+        eg_model = EpsilonGreedyRecommender(similar_songs, n_iter=100)
+
+        # Terapkan feedback historis ke model
+        ts_model.apply_historical_feedback(feedback_data)
+        eg_model.apply_historical_feedback(feedback_data)
+
+        # Dapatkan rekomendasi
+        ts_recommendations = ts_model.select_top_songs()
         eg_recommendations = eg_model.select_top_songs()
 
         # Format output
@@ -242,7 +242,7 @@ def recommend():
             'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
             'score': score,
-             'relevance_ts': 0
+            'relevance_ts': 0
         } for song_id, score in ts_recommendations]
 
         eg_recommendations = [{
@@ -251,7 +251,7 @@ def recommend():
             'track_artist': similar_songs.loc[similar_songs['song_id'] == song_id, 'track_artist'].values[0],
             'uri': similar_songs.loc[similar_songs['song_id'] == song_id, 'uri'].values[0],
             'score': score,
-             'relevance_eg': 0
+            'relevance_eg': 0
         } for song_id, score in eg_recommendations]
 
         return jsonify({
@@ -260,8 +260,9 @@ def recommend():
         }), 200
 
     except Exception as e:
-        print("🔥 Error in /recommend:", str(e))
+        print("Error in /recommend:", str(e))
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/feedback', methods=['POST'])
 def feedback():

@@ -38,9 +38,9 @@
       </table>
     </div>
 
-    <!-- Section MAP -->
+    <!-- Section AP -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
-      <h2 class="section-title">MAP@K</h2>
+      <h2 class="section-title">Average Precision (AP@K)</h2>
       <table class="metrics-table table table-dark table-hover table-bordered rounded">
         <thead>
           <tr>
@@ -57,22 +57,23 @@
             <tr>
               <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_MAP@K_@10']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@1']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@3']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@5']) }}</td>
+              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@10']) }}</td>
             </tr>
             <tr>
               <td>Epsilon-Greedy</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_MAP@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_MAP@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_MAP@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_MAP@K_@10']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@1']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@3']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@5']) }}</td>
+              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@10']) }}</td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
 
     <!-- Section HitRate -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
@@ -159,8 +160,8 @@
         <!-- MAP Chart -->
         <div class="col-md-4">
           <div class="chart-container bg-secondary p-4 rounded">
-            <h4 class="text-center mb-3">MAP@K</h4>
-            <canvas ref="mapChart"></canvas>
+            <h4 class="text-center mb-3">AP@K</h4>
+            <canvas ref="apChart"></canvas>
           </div>
         </div>
 
@@ -200,22 +201,23 @@
           </div>
         </div>
 
-        <!-- MAP Cards -->
-        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'map' + k">
+        <!-- MAP Cards (ubah menjadi AP dengan nilai MAP) -->
+        <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'ap' + k">
           <div class="metric-card bg-gradient-purple rounded p-4">
             <h5 class="metric-title">MAP@{{ k }}</h5>
             <div class="metric-values">
               <div class="algorithm-metric">
                 <span class="badge bg-primary me-2">TS</span>
-                <span>{{ calculateAverage(`Thompson Sampling_MAP@K_@${k}`).toFixed(3) }}</span>
+                <span>{{ calculateAverage(`Thompson Sampling_AP@K_@${k}`).toFixed(3) }}</span>
               </div>
               <div class="algorithm-metric">
                 <span class="badge bg-danger me-2">EG</span>
-                <span>{{ calculateAverage(`Epsilon-Greedy_MAP@K_@${k}`).toFixed(3) }}</span>
+                <span>{{ calculateAverage(`Epsilon-Greedy_AP@K_@${k}`).toFixed(3) }}</span>
               </div>
             </div>
           </div>
         </div>
+
 
         <!-- Hit Rate Cards -->
         <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'hitrate' + k">
@@ -305,10 +307,10 @@ export default {
       });
 
       // MAP Chart
-      this.charts.map = new Chart(this.$refs.mapChart, {
+      this.charts.map = new Chart(this.$refs.apChart, {
         type: 'bar',
-        data: this.getChartData('MAP@K', ks, algorithms),
-        options: this.getChartOptions('MAP@K')
+        data: this.getChartData('AP@K', ks, algorithms),
+        options: this.getChartOptions('AP@K')
       });
 
       // Hit Rate Chart

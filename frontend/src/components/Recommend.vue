@@ -165,7 +165,7 @@
                   <input type="text" class="form-control bg-secondary text-white border-secondary" v-model="searchQuery"
                     @input="fetchSuggestions" placeholder="Search for a song or artist..." @keyup.enter="addSong">
                   <button class="btn btn-primary" type="button" @click="addSong">
-                    <i class="bi bi-plus-lg"></i> Add
+                    <i class="bi bi-plus-lg"></i> Tambah
                   </button>
                 </div>
 
@@ -234,7 +234,7 @@
                         </td>
                         <td>
                           <select class="form-select" v-model="song.relevance_ts" @change="submitRank(song, 'ts')">
-                            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+                            <option v-for="n in getRelevanceOptions(index + 1)" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
                       </tr>
@@ -296,7 +296,7 @@
                         </td>
                         <td>
                           <select class="form-select" v-model="song.relevance_eg" @change="submitRank(song, 'eg')">
-                            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+                            <option v-for="n in getRelevanceOptions(index + 1)" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
                       </tr>
@@ -312,15 +312,6 @@
                         :style="{ width: (epsilonGreedyAccuracy * 100) + '%' }"
                         :aria-valuenow="epsilonGreedyAccuracy * 100" aria-valuemin="0" aria-valuemax="100">
                         Precision: {{ (epsilonGreedyAccuracy * 100).toFixed(1) }}%
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col">
-                    <div class="progress">
-                      <div class="progress-bar bg-info" role="progressbar"
-                        :style="{ width: (epsilonGreedyHitrateAt3 * 100) + '%' }"
-                        :aria-valuenow="epsilonGreedyHitrateAt3 * 100" aria-valuemin="0" aria-valuemax="100">
-                        Hit Rate: {{ (epsilonGreedyHitrateAt3 * 100).toFixed(1) }}%
                       </div>
                     </div>
                   </div>
@@ -480,7 +471,12 @@ export default {
       this.currentArtist = '';
       this.currentSongUri = '';
     },
-
+    getRelevanceOptions(position) {
+      if (position <= 2) return 5; // Positions 1-2 have options 1-5
+      if (position <= 4) return 4; // Positions 3-4 have options 1-4
+      if (position <= 6) return 3; // Positions 5-6 have options 1-3
+      return 2; // All other positions have options 1-2
+    },
     fetchSuggestions() {
       if (this.searchQuery.length < 2) {
         this.suggestions = [];
@@ -734,6 +730,21 @@ export default {
             return dcg / idcg || 0;
           };
 
+          const calculateAP = (recommendations, relevantSongs, k) => {
+            const topK = recommendations.slice(0, k);
+            let sumPrecision = 0;
+            let relevantCount = 0;
+
+            topK.forEach((song, idx) => {
+              if (relevantSongs.includes(song.song_id)) {
+                relevantCount++;
+                sumPrecision += relevantCount / (idx + 1);
+              }
+            });
+
+            return relevantCount > 0 ? sumPrecision / Math.min(relevantSongs.length, k) : 0;
+          };
+
           const buildEvaluations = (algoName, recommendations) => {
             const evals = [];
             [1, 3, 5, 10].forEach(k => {
@@ -742,18 +753,13 @@ export default {
 
               const precision = relevant.length / k;
               const hitrate = relevant.length > 0 ? 1 : 0;
-
-              const map = relevant.reduce((acc, song, idx) => {
-                const hitCount = relevant.slice(0, idx + 1).length;
-                return acc + hitCount / (idx + 1);
-              }, 0) / likedSongs.length || 0;
-
+              const ap = calculateAP(recommendations, likedSongs, k);
               const ndcg = calculateNDCGAtK(topK, feedback, algoName, k);
 
               evals.push(
                 { algorithm: algoName, metric_type: "Precision@K", k: k, score: precision },
                 { algorithm: algoName, metric_type: "HitRate@K", k: k, score: hitrate },
-                { algorithm: algoName, metric_type: "MAP@K", k: k, score: map },
+                { algorithm: algoName, metric_type: "AP@K", k: k, score: ap },
                 { algorithm: algoName, metric_type: "nDCG@K", k: k, score: ndcg }
               );
             });
