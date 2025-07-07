@@ -5,10 +5,11 @@
     <!-- Section Precision -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
       <h2 class="section-title">Precision@K</h2>
-      <table class="metrics-table table table-dark table-hover table-bordered rounded">
+      <table class="metrics-table table table-dark table-hover table-striped rounded">
         <thead>
           <tr>
-            <th>User</th>
+            <th>User ID</th>
+            <th>Username</th>
             <th>Algorithm</th>
             <th>K=1</th>
             <th>K=3</th>
@@ -19,19 +20,20 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
+              <td rowspan="2" class="align-middle">{{ userData.user_id }}</td>
               <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_Precision@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_Precision@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_Precision@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_Precision@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_Precision@K_@10']) }}</td>
             </tr>
             <tr>
               <td>Epsilon-Greedy</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_Precision@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_Precision@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_Precision@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_Precision@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_Precision@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_Precision@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_Precision@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_Precision@K_@10']) }}</td>
             </tr>
           </template>
         </tbody>
@@ -41,10 +43,11 @@
     <!-- Section AP -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
       <h2 class="section-title">Average Precision (AP@K)</h2>
-      <table class="metrics-table table table-dark table-hover table-bordered rounded">
+      <table class="metrics-table table table-dark table-hover table-striped rounded">
         <thead>
           <tr>
-            <th>User</th>
+            <th>User ID</th>
+            <th>Username</th>
             <th>Algorithm</th>
             <th>K=1</th>
             <th>K=3</th>
@@ -55,33 +58,34 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
+              <td rowspan="2" class="align-middle">{{ userData.user_id }}</td>
               <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_AP@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_AP@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_AP@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_AP@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_AP@K_@10']) }}</td>
             </tr>
             <tr>
               <td>Epsilon-Greedy</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_AP@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_AP@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_AP@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_AP@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_AP@K_@10']) }}</td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
-
 
     <!-- Section HitRate -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
       <h2 class="section-title">HitRate@K</h2>
-      <table class="metrics-table table table-dark table-hover table-bordered rounded">
+      <table class="metrics-table table table-dark table-hover table-striped rounded">
         <thead>
           <tr>
-            <th>User</th>
+            <th>User ID</th>
+            <th>Username</th>
             <th>Algorithm</th>
             <th>K=1</th>
             <th>K=3</th>
@@ -92,31 +96,34 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
+              <td rowspan="2" class="align-middle">{{ userData.user_id }}</td>
               <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_HitRate@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_HitRate@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_HitRate@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_HitRate@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_HitRate@K_@10']) }}</td>
             </tr>
             <tr>
               <td>Epsilon-Greedy</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_HitRate@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_HitRate@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_HitRate@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_HitRate@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_HitRate@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_HitRate@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_HitRate@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_HitRate@K_@10']) }}</td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
     <!-- Section nDCG -->
     <div class="metrics-section bg-secondary shadow-sm rounded mb-5 p-4">
       <h2 class="section-title">nDCG@K</h2>
-      <table class="metrics-table table table-dark table-hover table-bordered rounded">
+      <table class="metrics-table table table-dark table-hover table-striped rounded">
         <thead>
           <tr>
-            <th>User</th>
+            <th>User ID</th>
+            <th>Username</th>
             <th>Algorithm</th>
             <th>K=1</th>
             <th>K=3</th>
@@ -127,19 +134,20 @@
         <tbody>
           <template v-for="(userData, username) in evaluations" :key="username">
             <tr>
+              <td rowspan="2" class="align-middle">{{ userData.user_id }}</td>
               <td rowspan="2" class="align-middle">{{ username }}</td>
               <td>Thompson Sampling</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Thompson Sampling_nDCG@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_nDCG@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_nDCG@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_nDCG@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Thompson Sampling_nDCG@K_@10']) }}</td>
             </tr>
             <tr>
               <td>Epsilon-Greedy</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@1']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@3']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@5']) }}</td>
-              <td>{{ formatNumber(userData['Epsilon-Greedy_nDCG@K_@10']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_nDCG@K_@1']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_nDCG@K_@3']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_nDCG@K_@5']) }}</td>
+              <td>{{ formatNumber(userData.metrics['Epsilon-Greedy_nDCG@K_@10']) }}</td>
             </tr>
           </template>
         </tbody>
@@ -201,10 +209,10 @@
           </div>
         </div>
 
-        <!-- MAP Cards (ubah menjadi AP dengan nilai MAP) -->
+        <!-- AP Cards -->
         <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'ap' + k">
           <div class="metric-card bg-gradient-purple rounded p-4">
-            <h5 class="metric-title">MAP@{{ k }}</h5>
+            <h5 class="metric-title">AP@{{ k }}</h5>
             <div class="metric-values">
               <div class="algorithm-metric">
                 <span class="badge bg-primary me-2">TS</span>
@@ -217,7 +225,6 @@
             </div>
           </div>
         </div>
-
 
         <!-- Hit Rate Cards -->
         <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'hitrate' + k">
@@ -235,7 +242,8 @@
             </div>
           </div>
         </div>
-        <!-- Di dalam summary-statistics, tambahkan card untuk nDCG -->
+
+        <!-- nDCG Cards -->
         <div class="col-md-6 col-lg-3" v-for="k in [1, 3, 5, 10]" :key="'ndcg' + k">
           <div class="metric-card bg-gradient-orange rounded p-4">
             <h5 class="metric-title">nDCG@{{ k }}</h5>
@@ -269,7 +277,7 @@ export default {
       evaluations: {},
       charts: {
         precision: null,
-        map: null,
+        ap: null,
         hitRate: null,
         ndcg: null
       }
@@ -306,8 +314,8 @@ export default {
         options: this.getChartOptions('Precision@K')
       });
 
-      // MAP Chart
-      this.charts.map = new Chart(this.$refs.apChart, {
+      // AP Chart
+      this.charts.ap = new Chart(this.$refs.apChart, {
         type: 'bar',
         data: this.getChartData('AP@K', ks, algorithms),
         options: this.getChartOptions('AP@K')
@@ -319,6 +327,8 @@ export default {
         data: this.getChartData('HitRate@K', ks, algorithms),
         options: this.getChartOptions('HitRate@K')
       });
+
+      // nDCG Chart
       this.charts.ndcg = new Chart(this.$refs.ndcgChart, {
         type: 'bar',
         data: this.getChartData('nDCG@K', ks, algorithms),
@@ -396,8 +406,8 @@ export default {
       let count = 0;
 
       for (const userData of Object.values(this.evaluations)) {
-        if (userData[metricKey] !== undefined) {
-          sum += parseFloat(userData[metricKey]);
+        if (userData.metrics && userData.metrics[metricKey] !== undefined) {
+          sum += parseFloat(userData.metrics[metricKey]);
           count++;
         }
       }

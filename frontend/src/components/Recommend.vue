@@ -1,30 +1,31 @@
 <template>
-  <div class="bg-dark text-white min-vh-100">
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-deepblue">
+  <div class="main-container">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">Music Recommendation</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-          aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand" href="#">
+          <i class="bi bi-soundwave me-2"></i>
+          MusicRecommender
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
               <a class="nav-link" href="#" @click.prevent="showHome" :class="{ 'active': currentView === 'home' }">
-                <i class="bi bi-house-door me-1"></i> Beranda
+                <i class=" me-1"></i> Beranda
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#" @click.prevent="showRecommendations"
                 :class="{ 'active': currentView === 'recommendations' }">
-                <i class="bi bi-music-note-list me-1"></i> Rekomendasi
+                <i class="me-1"></i> Rekomendasi
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="#" @click.prevent="showLikedSongs"
                 :class="{ 'active': currentView === 'liked' }">
-                <i class="bi bi-heart me-1"></i> Liked Songs
+                <i class="me-1"></i> Lagu Favorit
               </a>
             </li>
           </ul>
@@ -32,7 +33,7 @@
             <span class="navbar-text me-3">
               <i class="bi bi-person-circle me-1"></i> {{ username }}
             </span>
-            <button class="btn btn-outline-light" @click="logout">
+            <button class="btn btn-logout" @click="logout">
               <i class="bi bi-box-arrow-right me-1"></i> Logout
             </button>
           </div>
@@ -40,107 +41,76 @@
       </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container mt-4">
-      <!-- Home View -->
+    <main class="container mt-4 content-fade-in">
+
       <div v-if="currentView === 'home'">
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card bg-dark text-white border-secondary">
-              <div class="card-body">
-                <h3 class="card-title"><i class="bi bi-search me-2"></i>Cari Lagu</h3>
-                <div class="input-group mb-3">
-                  <input type="text" class="form-control bg-secondary text-white border-secondary" v-model="searchQuery"
-                    @input="fetchSuggestions" placeholder="Search for a song or artist..." @keyup.enter="addSong">
-                  <button class="btn btn-primary" type="button" @click="addSong">
-                    <i class="bi bi-plus-lg"></i> Add
-                  </button>
-                </div>
-                <div v-if="suggestions.length" class="suggestions-dropdown">
-                  <ul class="list-group">
-                    <li v-for="(suggestion, index) in suggestions" :key="index"
-                      class="list-group-item list-group-item-action bg-secondary text-white"
-                      @click="selectSong(suggestion)">
-                      {{ suggestion.track_name }} - {{ suggestion.track_artist }}
-                      <span class="badge bg-primary float-end">{{ suggestion.playlist_genre }}</span>
-                    </li>
-                  </ul>
-                </div>
+        <section class="mb-5">
+          <div class="search-card">
+            <div class="card-body p-lg-5">
+              <h2 class="card-title mb-2 fw-bold">Jelajahi Dunia Musik</h2>
+              <p class="text-muted mb-4">Temukan dan pilih lagu favorit untuk memulai petualangan musik Anda.</p>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control search-card" v-model="searchQuery" @input="fetchSuggestions"
+                  placeholder="Cari judul lagu atau nama artis..." @keyup.enter="addSong">
+                <button class="btn btn-primary-custom" type="button" @click="addSong">Pilih</button>
+              </div>
+              <div v-if="suggestions.length" class="suggestions-dropdown">
+                <ul class="list-group">
+                  <li v-for="(suggestion, index) in suggestions" :key="index" class="list-group-item"
+                    @click="selectSong(suggestion)">
+                    {{ suggestion.track_name }} - <small>{{ suggestion.track_artist }}</small>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div v-if="selectedSongs.length" class="row mb-4">
-          <div class="col-12">
-            <div class="card bg-dark text-white border-secondary">
-              <div class="card-body">
-                <h4 class="card-title"><i class="bi bi-list-check me-2"></i>Lagu yang dipilih ({{ selectedSongs.length
-                }})</h4>
-                <div class="d-flex flex-wrap gap-2">
-                  <div v-for="(song, index) in selectedSongs" :key="index" class="card bg-secondary text-white"
-                    style="width: 18rem;">
-                    <div class="card-body">
-                      <h5 class="card-title">{{ song.track_name }}</h5>
-                      <h6 class="card-subtitle mb-2">{{ song.track_artist }}</h6>
-                      <p class="card-text">
-                        <span class="badge bg-info me-1">{{ song.playlist_genre }}</span>
-                        <span class="badge bg-warning">{{ song.playlist_subgenre }}</span>
-                      </p>
-                      <button class="btn btn-sm btn-outline-danger" @click="removeSong(index)">
-                        <i class="bi bi-trash"></i> Hapus
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <button class="btn btn-primary mt-3" @click="fetchRecommendations" :disabled="selectedSongs.length < 3">
-                  <i class="bi bi-stars me-1"></i> Dapatkan Rekomendasi
+        <section v-if="selectedSongs.length" class="mb-5 content-fade-in">
+          <h4 class="section-title">Lagu Pilihan Anda ({{ selectedSongs.length }})</h4>
+          <div class="selected-songs-container">
+            <div v-for="(song, index) in selectedSongs" :key="index" class="song-pill">
+              <i class="bi bi-music-note-beamed me-2"></i>
+              <span>{{ song.track_name }}</span>
+              <button class="btn-remove-pill" @click="removeSong(index)">&times;</button>
+            </div>
+          </div>
+          <button class="btn btn-primary-custom w-100 mt-3 py-3" @click="fetchRecommendations"
+            :disabled="selectedSongs.length < 3">
+            <i class="bi bi-magic me-2"></i> Dapatkan Rekomendasi Dari Pilihan Ini
+          </button>
+        </section>
+
+        <section class="mb-4">
+          <h4 class="section-title">Daftar Lagu Berdasarkan Genre</h4>
+          <div class="accordion" id="genreAccordion">
+            <div class="accordion-item" v-for="(songs, genre, index) in allSongsByGenre" :key="index">
+              <h2 class="accordion-header" :id="'heading' + index">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  :data-bs-target="'#collapse' + index">
+                  {{ genre }} <span class="badge-genre ms-2">{{ songs.length }} lagu</span>
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-12">
-            <h3 class="mb-3"><i class="bi bi-collection me-2"></i>Cari berdasarkan genre</h3>
-            <div class="accordion" id="genreAccordion">
-              <div class="accordion-item bg-dark text-white border-secondary"
-                v-for="(songs, genre, index) in allSongsByGenre" :key="index">
-                <h2 class="accordion-header" :id="'heading' + index">
-                  <button class="accordion-button bg-dark text-white" type="button" data-bs-toggle="collapse"
-                    :data-bs-target="'#collapse' + index" :aria-expanded="index === 0 ? 'true' : 'false'"
-                    :aria-controls="'collapse' + index">
-                    {{ genre }} ({{ songs.length }} lagu)
-                  </button>
-                </h2>
-                <div :id="'collapse' + index" class="accordion-collapse collapse" :class="{ 'show': index === 0 }"
-                  :aria-labelledby="'heading' + index" data-bs-parent="#genreAccordion">
-                  <div class="accordion-body">
-                    <div v-if="songs.length === 0" class="text-center py-3">
-                      Tidak ada lagu untuk genre ini
-                    </div>
-                    <div v-else class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
-                      <div class="col" v-for="(song, songIndex) in songs" :key="songIndex">
-                        <div class="card h-100 bg-secondary text-white">
-                          <div class="card-body">
-                            <h5 class="card-title">{{ song.track_name }}</h5>
-                            <h6 class="card-subtitle mb-2 ">{{ song.track_artist }}</h6>
-                            <p class="card-text">
-                              <span class="badge bg-primary me-1">{{ song.playlist_genre }}</span>
-                              <span class="badge bg-warning">{{ song.playlist_subgenre }}</span>
-                            </p>
-                            <div class="d-flex justify-content-between">
-                              <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
-                                <i class="bi bi-play"></i> Play
-                              </button>
-                              <button class="btn btn-sm"
-                                :class="likedSongs.includes(song.song_id) ? 'btn-danger' : 'btn-outline-success'"
-                                @click="addLikedSongs(song.song_id, !likedSongs.includes(song.song_id))">
-                                <i :class="likedSongs.includes(song.song_id) ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
-                              </button>
-                            </div>
-                          </div>
+              </h2>
+              <div :id="'collapse' + index" class="accordion-collapse collapse" :aria-labelledby="'heading' + index"
+                data-bs-parent="#genreAccordion">
+                <div class="accordion-body">
+                  <div class="row g-3">
+                    <div class="col-12 col-md-6" v-for="song in songs" :key="song.song_id">
+                      <div class="genre-song-card">
+                        <div>
+                          <div class="fw-bold text-white">{{ song.track_name }}</div>
+                          <div class="text-muted small">{{ song.track_artist }}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                          <button class="btn-icon" @click="playSong(song.uri)" title="Play"><i
+                              class="bi bi-play-fill"></i></button>
+                          <button class="btn-icon"
+                            @click.stop="addLikedSongs(song.song_id, !likedSongs.includes(song.song_id))"
+                            :title="likedSongs.includes(song.song_id) ? 'Unlike' : 'Like'">
+                            <i
+                              :class="likedSongs.includes(song.song_id) ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -149,91 +119,117 @@
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Recommendations View -->
       <div v-if="currentView === 'recommendations'">
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card bg-dark text-white border-secondary">
-              <div class="card-body">
-                <h3 class="card-title"><i class="bi bi-magic me-2"></i>Rekomendasi Musik</h3>
-                <p class="">Pilih 5 lagu favorit kamu</p>
+        <section class="mb-5">
+          <h2 class="display-5 fw-bold mb-3">Direkomendasikan untuk Anda</h2>
+          <p class="text-muted fs-5">Lagu-lagu ini kami pilih berdasarkan selera musik Anda.</p>
 
-                <div class="input-group mb-3">
-                  <input type="text" class="form-control bg-secondary text-white border-secondary" v-model="searchQuery"
-                    @input="fetchSuggestions" placeholder="Search for a song or artist..." @keyup.enter="addSong">
-                  <button class="btn btn-primary" type="button" @click="addSong">
-                    <i class="bi bi-plus-lg"></i> Tambah
-                  </button>
-                </div>
+          <div v-if="isLoadingRecommended" class="text-center py-5">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+          </div>
 
-                <div v-if="suggestions.length" class="suggestions-dropdown">
-                  <ul class="list-group">
-                    <li v-for="(suggestion, index) in suggestions" :key="index"
-                      class="list-group-item list-group-item-action bg-secondary text-white"
-                      @click="selectSong(suggestion)">
-                      {{ suggestion.track_name }} - {{ suggestion.track_artist }}
-                    </li>
-                  </ul>
-                </div>
+          <div v-else-if="!likedSongsRecommendations.length" class="empty-state-card">
+            <i class="bi bi-music-note-list display-1 text-primary"></i>
+            <h4 class="mt-3">Belum Ada Rekomendasi</h4>
+            <p class="text-muted">Sukai lebih banyak lagu untuk mendapatkan rekomendasi yang lebih akurat.</p>
+            <button class="btn btn-primary-custom mt-3" @click="showHome"><i
+                class="bi bi-house-door-fill me-2"></i>Jelajahi Lagu</button>
+          </div>
 
-                <div v-if="selectedSongs.length" class="mt-3">
-                  <h5>Lagu yang dipilih:</h5>
-                  <div class="d-flex flex-wrap gap-2">
-                    <span v-for="(song, index) in selectedSongs" :key="index" class="badge bg-primary p-2">
-                      {{ song.track_name }}
-                      <button class="btn btn-sm btn-outline-light ms-2" @click.stop="removeSong(index)">
-                        <i class="bi bi-x"></i>
-                      </button>
-                    </span>
-                  </div>
-                </div>
-
-                <button class="btn btn-primary mt-3" @click="fetchRecommendations" :disabled="selectedSongs.length < 3">
-                  <i class="bi bi-stars me-1"></i> Dapatkan Rekomendasi
+          <div v-else class="recommendation-row">
+            <div class="song-card" v-for="song in likedSongsRecommendations" :key="song.song_id">
+              <div class="song-card-image">
+                <i class="bi bi-music-note-beamed"></i>
+                <div class="play-overlay" @click="playSong(song.uri)"> <i class="bi bi-play-fill"></i> </div>
+              </div>
+              <div class="song-card-body">
+                <h5 class="song-title">{{ song.track_name }}</h5>
+                <p class="song-artist">{{ song.track_artist }}</p>
+                <button class="btn-like" @click.stop="giveFeedback(song.song_id, !song.liked)">
+                  <i :class="song.liked ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div v-if="showResults" class="row">
-          <!-- Thompson Sampling Recommendations -->
-          <div class="col-md-6 mb-4">
-            <div class="card bg-dark text-white border-success">
-              <div class="card-header bg-success text-white">
+        <hr class="my-5 hr-styled">
+
+        <section>
+          <h3 class="section-title">Bandingkan Algoritma Rekomendasi</h3>
+          <p class="text-muted mb-4">Pilih minimal 5 lagu untuk membandingkan hasil dari Thompson Sampling &
+            Epsilon-Greedy.</p>
+
+          <div class="search-card mb-4">
+            <div class="card-body">
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" v-model="searchQuery" @input="fetchSuggestions"
+                  placeholder="Cari lagu untuk ditambahkan..." @keyup.enter="addSong">
+              </div>
+              <div v-if="suggestions.length" class="suggestions-dropdown">
+                <ul class="list-group">
+                  <li v-for="(suggestion, index) in suggestions" :key="index" class="list-group-item"
+                    @click="selectSong(suggestion)">
+                    {{ suggestion.track_name }} - <small>{{ suggestion.track_artist }}</small>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="selectedSongs.length" class="mb-4">
+            <div class="selected-songs-container">
+              <div v-for="(song, index) in selectedSongs" :key="index" class="song-pill">
+                <i class="bi bi-music-note-beamed me-2"></i>
+                <span>{{ song.track_name }}</span>
+                <button class="btn-remove-pill" @click="removeSong(index)">&times;</button>
+              </div>
+            </div>
+            <button class="btn btn-primary-custom w-100 mt-3 py-3" @click="fetchRecommendations"
+              :disabled="selectedSongs.length < 3">
+              <i class="bi bi-magic me-2"></i> Bandingkan Hasil Rekomendasi
+            </button>
+          </div>
+        </section>
+
+        <div v-if="showResults" class="row mt-5 content-fade-in">
+          <div class="col-lg-6 mb-4">
+            <div class="card result-card is-success h-100">
+              <div class="card-header">
                 <h4><i class="bi bi-graph-up-arrow me-2"></i>Thompson Sampling</h4>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
-                  <table class="table table-dark table-hover">
+                  <table class="table table-custom">
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Judul</th>
-                        <th>Artis</th>
-                        <th>Aksi</th>
+                        <th>Lagu</th>
+                        <th class="text-center">Aksi</th>
                         <th>Relevansi</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(song, index) in tsRecommendations" :key="index">
                         <td>{{ index + 1 }}</td>
-                        <td>{{ song.track_name }}</td>
-                        <td>{{ song.track_artist }}</td>
                         <td>
-                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'"
-                            @click="giveFeedback(song.song_id, !song.liked)">
-                            <i :class="song.liked ? 'bi bi-hand-thumbs-down' : 'bi bi-hand-thumbs-up'"></i>
-                          </button>
-                          <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
-                            <i class="bi bi-play"></i>
+                          <div class="fw-bold">{{ song.track_name }}</div>
+                          <small class="text-muted">{{ song.track_artist }}</small>
+                        </td>
+                        <td class="action-buttons text-center">
+                          <button class="btn-icon" @click="playSong(song.uri)"><i
+                              class="bi bi-play-circle-fill"></i></button>
+                          <button class="btn-icon" @click="giveFeedback(song.song_id, !song.liked)">
+                            <i :class="song.liked ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
                           </button>
                         </td>
                         <td>
-                          <select class="form-select" v-model="song.relevance_ts" @change="submitRank(song, 'ts')">
+                          <select class="form-select form-select-sm" v-model="song.relevance_ts"
+                            @change="submitRank(song, 'ts')">
                             <option v-for="n in getRelevanceOptions(index + 1)" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
@@ -242,60 +238,41 @@
                   </table>
                 </div>
               </div>
-              <div class="card-footer">
-                <div class="row">
-                  <div class="col">
-                    <div class="progress">
-                      <div class="progress-bar bg-success" role="progressbar"
-                        :style="{ width: (tsAccuracy * 100) + '%' }" :aria-valuenow="tsAccuracy * 100" aria-valuemin="0"
-                        aria-valuemax="100">
-                        Precision: {{ (tsAccuracy * 100).toFixed(1) }}%
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-                <button class="btn btn-primary" @click="submitFeedback('ts')">
-                  <i class="bi bi-save me-1"></i> Submit Feedback
-                </button>
-              </div>
             </div>
           </div>
-
-          <!-- Epsilon-Greedy Recommendations -->
-          <div class="col-md-6 mb-4">
-            <div class="card bg-dark text-white border-warning">
-              <div class="card-header bg-warning text-dark">
+          <div class="col-lg-6 mb-4">
+            <div class="card result-card is-warning h-100">
+              <div class="card-header">
                 <h4><i class="bi bi-dice-5 me-2"></i>Epsilon-Greedy</h4>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
-                  <table class="table table-dark table-hover">
+                  <table class="table table-custom">
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Judul</th>
-                        <th>Artis</th>
-                        <th>Aksi</th>
+                        <th>Lagu</th>
+                        <th class="text-center">Aksi</th>
                         <th>Relevansi</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(song, index) in epsilonGreedyRecommendations" :key="index">
                         <td>{{ index + 1 }}</td>
-                        <td>{{ song.track_name }}</td>
-                        <td>{{ song.track_artist }}</td>
                         <td>
-                          <button class="btn btn-sm me-2" :class="song.liked ? 'btn-danger' : 'btn-success'"
-                            @click="giveFeedback(song.song_id, !song.liked)">
-                            <i :class="song.liked ? 'bi bi-hand-thumbs-down' : 'bi bi-hand-thumbs-up'"></i>
-                          </button>
-                          <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
-                            <i class="bi bi-play"></i>
+                          <div class="fw-bold">{{ song.track_name }}</div>
+                          <small class="text-muted">{{ song.track_artist }}</small>
+                        </td>
+                        <td class="action-buttons text-center">
+                          <button class="btn-icon" @click="playSong(song.uri)"><i
+                              class="bi bi-play-circle-fill"></i></button>
+                          <button class="btn-icon" @click="giveFeedback(song.song_id, !song.liked)">
+                            <i :class="song.liked ? 'bi bi-heart-fill text-danger' : 'bi bi-heart'"></i>
                           </button>
                         </td>
                         <td>
-                          <select class="form-select" v-model="song.relevance_eg" @change="submitRank(song, 'eg')">
+                          <select class="form-select form-select-sm" v-model="song.relevance_eg"
+                            @change="submitRank(song, 'eg')">
                             <option v-for="n in getRelevanceOptions(index + 1)" :key="n" :value="n">{{ n }}</option>
                           </select>
                         </td>
@@ -304,114 +281,53 @@
                   </table>
                 </div>
               </div>
-              <div class="card-footer">
-                <div class="row">
-                  <div class="col">
-                    <div class="progress">
-                      <div class="progress-bar bg-warning" role="progressbar"
-                        :style="{ width: (epsilonGreedyAccuracy * 100) + '%' }"
-                        :aria-valuenow="epsilonGreedyAccuracy * 100" aria-valuemin="0" aria-valuemax="100">
-                        Precision: {{ (epsilonGreedyAccuracy * 100).toFixed(1) }}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <button class="btn btn-primary" @click="submitFeedback('eg')">
-                  <i class="bi bi-save me-1"></i> Submit Feedback
-                </button>
-              </div>
             </div>
           </div>
-
-
         </div>
       </div>
-
-      <!-- Liked Songs View -->
 
       <div v-if="currentView === 'liked'">
-        <div class="row">
-          <div class="col-12">
-            <div class="card bg-dark text-white border-danger">
-              <div class="card-header bg-danger text-white">
-                <h3><i class="bi bi-heart-fill me-2"></i>Lagu yang Disukai</h3>
-              </div>
-              <div class="card-body">
-                <div v-if="likedSongsList.length === 0" class="text-center py-5">
-                  <i class="bi bi-music-note-beamed display-4 text-muted"></i>
-                  <h4 class="mt-3 text-muted">Belum ada lagu yang disukai</h4>
-                </div>
-                <div v-else>
-                  <div class="table-responsive">
-                    <table class="table table-dark table-hover">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Judul Lagu</th>
-                          <th>Artis</th>
-                          <th>Genre</th>
-                          <th>Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(song, index) in likedSongsList" :key="song.song_id">
-                          <td>{{ index + 1 }}</td>
-                          <td>{{ song.track_name }}</td>
-                          <td>{{ song.track_artist }}</td>
-                          <td>
-                            <span class="badge bg-primary">{{ song.playlist_genre }}</span>
-                          </td>
-                          <td>
-                            <button class="btn btn-sm btn-danger me-2" @click="unlikeLikedSong(song)">
-                              <i class="bi bi-heartbreak"></i> Unlike
-                            </button>
-                            <button class="btn btn-sm btn-outline-light" @click="playSong(song.uri)">
-                              <i class="bi bi-play"></i> Play
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <section class="mb-5">
+          <h2 class="display-5 fw-bold mb-3"><i class=" me-2 text-danger"></i>Lagu Favorit Anda</h2>
+          <div v-if="!likedSongsList.length" class="empty-state-card">
+            <i class="bi bi-emoji-frown display-1 text-primary"></i>
+            <h4 class="mt-3">Koleksi Masih Kosong</h4>
+            <p class="text-muted">Tekan ikon hati pada lagu yang Anda suka untuk menambahkannya di sini.</p>
           </div>
-        </div>
+          <div v-else class="table-responsive">
+            <table class="table table-custom">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Judul Lagu</th>
+                  <th>Artis</th>
+                  <th>Genre</th>
+                  <th class="text-end">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(song, index) in likedSongsList" :key="song.song_id">
+                  <td>{{ index + 1 }}</td>
+                  <td>{{ song.track_name }}</td>
+                  <td>{{ song.track_artist }}</td>
+                  <td><span class="badge-genre">{{ song.playlist_genre }}</span></td>
+                  <td class="text-end">
+                    <button class="btn-icon" @click="playSong(song.uri)" title="Play"><i
+                        class="bi bi-play-circle-fill"></i></button>
+                    <button class="btn-icon text-danger" @click="unlikeLikedSong(song)" title="Unlike"><i
+                        class="bi bi-trash-fill"></i></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
-      <!-- Music Player -->
-      <div v-if="currentSongUri" class="fixed-bottom bg-dark text-white p-3 border-top border-secondary">
-        <div class="container">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <h5 class="mb-0">Now Playing: {{ currentSong }}</h5>
-              <p class="mb-0 text-muted">{{ currentArtist }}</p>
-            </div>
-            <div class="col-md-4 text-end">
-              <button class="btn btn-light btn-sm me-2" @click="togglePlay">
-                <i :class="isPaused ? 'bi bi-play' : 'bi bi-pause'"></i>
-              </button>
-              <button class="btn btn-light btn-sm me-2" @click="stopPlayback">
-                <i class="bi bi-stop"></i>
-              </button>
-              <button class="btn btn-outline-light btn-sm" @click="showSpotifyPlayer = !showSpotifyPlayer">
-                <i class="bi bi-spotify"></i>
-              </button>
-            </div>
-          </div>
-          <div v-if="showSpotifyPlayer" class="row mt-3">
-            <div class="col-12">
-              <iframe :src="'https://open.spotify.com/embed/track/' + currentSongUri" width="100%" height="80"
-                frameborder="0" allowtransparency="true" allow="encrypted-media">
-              </iframe>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
   </div>
 </template>
+
 
 <script>
 import axios from 'axios';
@@ -441,27 +357,63 @@ export default {
       allFeedback: [], // Store all feedback data including relevance
       allSongs: [],
       allSongsByGenre: {},
+      likedSongsRecommendations: [],
+      isLoadingRecommended: false,
       showResults: false,
       showSpotifyPlayer: false
     };
   },
   methods: {
     playSong(uri) {
-      const song = [...this.tsRecommendations, ...this.epsilonGreedyRecommendations, ...this.allSongs].find(s =>
-        s.uri === uri || (s.track_uri && s.track_uri === uri)
+      // Jika URI sudah dalam format spotify:track:xxx, ekstrak ID-nya
+      const trackId = uri.includes('spotify:track:')
+        ? uri.split(':')[2]
+        : uri;
+
+      // Cari lagu di semua sumber data
+      const song = [
+        ...this.tsRecommendations,
+        ...this.epsilonGreedyRecommendations,
+        ...this.allSongs,
+        ...this.likedSongsList,
+        ...this.selectedSongs
+      ].find(s =>
+        s.uri === uri ||
+        s.track_uri === uri ||
+        (s.uri && s.uri.includes(trackId)) ||
+        (s.track_uri && s.track_uri.includes(trackId))
       );
 
       if (song) {
-        this.currentSongUri = uri.split(':')[2];
-        this.currentSong = song.track_name || song.song;
-        this.currentArtist = song.track_artist || song.artist;
+        this.currentSongUri = trackId;
+        this.currentSong = song.track_name || song.trackName || song.name;
+        this.currentArtist = song.track_artist || song.artistName || song.artist;
         this.isPlaying = true;
         this.isPaused = false;
+        this.showSpotifyPlayer = true; // Otomatis tampilkan player
+
+        // Scroll ke player
+        setTimeout(() => {
+          const playerElement = document.querySelector('.fixed-bottom');
+          if (playerElement) {
+            playerElement.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      } else {
+        console.error("Song not found for URI:", uri);
+        toast.error("Lagu tidak ditemukan");
       }
     },
 
     togglePlay() {
+      if (!this.currentSongUri) return;
+
       this.isPaused = !this.isPaused;
+      if (this.isPaused) {
+        toast.info("Paused: " + this.currentSong);
+      } else {
+        toast.info("Playing: " + this.currentSong);
+      }
     },
 
     stopPlayback() {
@@ -470,6 +422,22 @@ export default {
       this.currentSong = '';
       this.currentArtist = '';
       this.currentSongUri = '';
+      this.showSpotifyPlayer = false;
+      toast.info("Playback stopped");
+    },
+    addLikedSongs(songId, liked) {
+      axios.post('http://localhost:5000/feedback', {
+        song_id: songId,
+        liked: liked
+      }, { withCredentials: true })
+        .then(() => {
+          this.updateLikedStatus(songId, liked);
+          toast.success(liked ? 'Lagu ditambahkan ke favorit' : 'Lagu dihapus dari favorit');
+        })
+        .catch(error => {
+          console.error("Error updating liked status:", error);
+          toast.error('Gagal memperbarui status lagu');
+        });
     },
     getRelevanceOptions(position) {
       if (position <= 2) return 5; // Positions 1-2 have options 1-5
@@ -551,6 +519,57 @@ export default {
         });
     },
 
+    showRecommendations() {
+      this.currentView = 'recommendations';
+      this.showResults = false; // Sembunyikan hasil rekomendasi manual
+
+      // Kosongkan data rekomendasi manual sebelumnya
+      this.selectedSongs = [];
+      this.tsRecommendations = [];
+      this.epsilonGreedyRecommendations = [];
+
+      // PANGGILAN OTOMATIS ke backend
+      this.fetchRecommendationsFromLiked();
+    },
+
+    fetchRecommendationsFromLiked() {
+      this.isLoadingRecommended = true;
+      console.log('Memulai permintaan rekomendasi...');
+
+      axios.get('http://localhost:5000/recommend_from_liked', {
+        withCredentials: true,
+        params: {
+          _: new Date().getTime() // Cache buster
+        }
+      })
+        .then(response => {
+          console.log('Respons API:', response);
+          if (response.data?.epsilon_greedy_recommendations) {
+            this.likedSongsRecommendations = response.data.epsilon_greedy_recommendations.map(song => ({
+              ...song,
+              liked: this.likedSongs.includes(song.song_id)
+            }));
+          } else {
+            console.warn('Format respons tidak valid:', response.data);
+          }
+        })
+        .catch(error => {
+          console.error('Detail error:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
+
+          if (error.response?.data?.error) {
+            toast.error(`Server error: ${error.response.data.error}`);
+          } else {
+            toast.error('Gagal memuat rekomendasi. Coba lagi nanti.');
+          }
+        })
+        .finally(() => {
+          this.isLoadingRecommended = false;
+        });
+    },
     submitRank(song, algorithm) {
       const data = {
         song_id: song.song_id,
@@ -608,18 +627,19 @@ export default {
         });
     },
 
-    giveFeedback(songId, liked) {
+    giveFeedback(songId, liked) { // `liked` di sini sudah boolean (true/false)
       axios.post('http://localhost:5000/feedback', {
         song_id: songId,
-        liked: liked
+        liked: liked // Kirim boolean langsung
       }, { withCredentials: true })
         .then(() => {
           this.updateLikedStatus(songId, liked);
-          this.fetchLikedSongs();
+          this.fetchLikedSongs(); // Muat ulang daftar lagu yang disukai
           this.updateAccuracy();
         })
         .catch(error => {
           console.error("Error submitting feedback:", error);
+          toast.error("Gagal menyimpan feedback.");
         });
     },
 
@@ -631,7 +651,10 @@ export default {
           song.liked = liked;
         }
       });
-
+      const autoRecSong = this.likedSongsRecommendations.find(song => song.song_id === songId);
+      if (autoRecSong) {
+        autoRecSong.liked = liked;
+      }
       // Update likedSongs array
       if (liked) {
         if (!this.likedSongs.includes(songId)) {
@@ -786,10 +809,7 @@ export default {
       this.showResults = false;
     },
 
-    showRecommendations() {
-      this.currentView = 'recommendations';
-      this.showResults = false;
-    },
+
 
     showLikedSongs() {
       this.currentView = 'liked';
@@ -835,133 +855,547 @@ export default {
 };
 </script>
 
+<style>
+/* Import Font Poppins */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Variabel Warna Global */
+:root {
+  --bg-color: #1E1E2F;
+  --card-bg: #2A2A3D;
+  --border-color: #4A4A5D;
+  --text-color: #FFFFFF;
+  --text-muted: #ccc9c9;
+  --primary-color: #58A6FF;
+  --primary-hover: #79C0FF;
+  --accent-danger: #F85149;
+  --accent-success: #3FB950;
+}
+
+/* Terapkan background ke seluruh halaman */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Poppins', sans-serif;
+}
+</style>
+
 <style scoped>
-.bg-dark {
-  background-color: #0e0f11 !important;
+/*
+  Style .main-container tidak lagi membutuhkan background-color
+  karena sudah di-handle oleh 'body' di style global.
+*/
+.main-container {
+  min-height: 100vh;
 }
 
-.bg-secondary {
-  background-color: #1b1d20 !important;
+/* Animasi Fade In untuk Konten */
+.content-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
 }
 
-.bg-primary {
-  background-color: #5c6ac4 !important;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.bg-deepblue {
-  background-color: #2e3548 !important;
+/* Garis Pemisah dengan Gaya */
+.hr-styled {
+  border: none;
+  height: 1px;
+  background-image: linear-gradient(to right, rgba(68, 75, 87, 0), rgba(68, 75, 87, 0.75), rgba(68, 75, 87, 0));
 }
 
-.bg-info {
-  background-color: #4fa3d1 !important;
+/* Judul Section yang Elegan */
+.section-title {
+  color: var(--text-color);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--primary-color);
+  padding-left: 1rem;
 }
 
-.bg-warning {
-  background-color: #f3c969 !important;
-}
-
-.bg-success {
-  background-color: #45b29a !important;
-}
-
-.bg-danger {
-  background-color: #f45b69 !important;
-}
-
+/* Navbar dengan Efek Kaca (Glassmorphism) */
 .navbar {
-  padding: 0.8rem 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  background-color: rgba(30, 30, 47, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .navbar-brand {
   font-weight: 700;
-  font-size: 1.5rem;
-  color: #f0f0f0 !important;
+  font-size: 1.25rem;
+  color: var(--text-color) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
 }
 
 .nav-link {
+  color: var(--text-muted) !important;
   font-weight: 500;
+  transition: color 0.3s ease;
+  border-radius: 6px;
+  padding: 0.5rem 1rem !important;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  color: var(--primary-color) !important;
+  background-color: rgba(88, 166, 255, 0.1);
+}
+
+.navbar-text {
+  color: var(--text-muted);
+}
+
+.btn-logout {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
   transition: all 0.3s ease;
-  color: #cfd8dc !important;
 }
 
-.nav-link:hover,
-.nav-link.active {
-  color: #ffffff !important;
+.btn-logout:hover {
+  background-color: var(--accent-danger);
+  border-color: var(--accent-danger);
+  color: var(--text-color);
+}
+
+/* Tombol Utama yang Menonjol */
+.btn-primary-custom {
+  background-color: var(--primary-color);
+  border: none;
+  color: #0D1117;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+}
+
+.btn-primary-custom:hover {
+  background-color: var(--primary-hover);
   transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(88, 166, 255, 0.2);
 }
 
-.card {
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease;
-  background-color: #1b1d20 !important;
+.btn-primary-custom:disabled {
+  background-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
 }
 
-.card:hover {
+/* Kartu Pencarian */
+.search-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.search-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.form-control,
+.input-group-text {
+  background-color: var(--bg-color) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+  padding: 0.8rem 1rem;
+  height: 50px;
+}
+
+.form-control:focus {
+  background-color: var(--bg-color) !important;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.25) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.input-group-text {
+  border-right: none !important;
+}
+
+.form-control {
+  border-left: none !important;
+}
+
+.input-group .btn-primary-custom {
+  border-radius: 0 6px 6px 0;
+}
+
+/* Dropdown Saran Lagu */
+.suggestions-dropdown {
+  position: absolute;
+  z-index: 1000;
+  width: calc(100% - 4rem);
+  margin-top: 0.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.suggestions-dropdown .list-group-item {
+  background-color: transparent;
+  color: var(--text-color);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.suggestions-dropdown .list-group-item:last-child {
+  border-bottom: none;
+}
+
+.suggestions-dropdown .list-group-item:hover {
+  background-color: var(--primary-color);
+  color: var(--bg-color);
+}
+
+/* Pill Lagu Pilihan */
+.selected-songs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.song-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.song-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+}
+
+.btn-remove-pill {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-remove-pill:hover {
+  color: var(--accent-danger);
+}
+
+
+/* Kartu Lagu untuk Rekomendasi */
+.recommendation-row {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  gap: 1.5rem;
+}
+
+.song-card {
+  flex: 0 0 200px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.song-card:hover {
   transform: translateY(-5px);
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.btn-primary {
-  background-color: #5c6ac4;
-  border-color: #5c6ac4;
+.song-card-image {
+  height: 180px;
+  background: linear-gradient(45deg, var(--bg-color), var(--card-bg));
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 4rem;
+  color: var(--text-muted);
+  position: relative;
 }
 
-.btn-primary:hover {
-  background-color: #4b59a6;
-  border-color: #4b59a6;
+.play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  border-radius: 12px 12px 0 0;
 }
 
-.btn-outline-light:hover {
-  color: #212121 !important;
-  background-color: #ffffff !important;
-  border-color: #ffffff !important;
+.song-card:hover .play-overlay {
+  opacity: 1;
 }
 
-.badge {
-  font-weight: 500;
+.song-card-body {
+  padding: 1rem;
+  position: relative;
+}
+
+.song-title {
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+  color: var(--text-color);
+}
+
+.song-artist {
   font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.table-hover tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+.btn-like {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  transition: all 0.3s;
 }
 
-.accordion-button:not(.collapsed) {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+.btn-like .bi-heart-fill {
+  color: var(--accent-danger);
 }
 
-.accordion-button:focus {
-  box-shadow: none;
-  border-color: transparent;
+.btn-like:hover {
+  color: var(--text-color);
+  transform: scale(1.1);
 }
 
-.progress {
-  height: 22px;
-  border-radius: 5px;
+/* Tabel Kustom */
+.table-custom {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--border-color);
+  --bs-table-color: var(--text-color);
+  --bs-table-hover-bg: rgba(88, 166, 255, 0.05);
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
 }
 
-.progress-bar {
-  font-weight: 500;
+.table-custom thead th {
+  border: none;
+  font-weight: 600;
+  color: var(--text-muted);
   font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 1rem;
 }
 
-/* Scrollbar Styling */
+.table-custom tbody tr {
+  background: var(--card-bg);
+  transition: all 0.2s ease-in-out;
+}
+
+.table-custom tbody tr:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  position: relative;
+}
+
+.table-custom td,
+.table-custom th {
+  border: none;
+  vertical-align: middle;
+}
+
+.table-custom td:first-child {
+  border-radius: 8px 0 0 8px;
+  padding-left: 1.5rem;
+}
+
+.table-custom td:last-child {
+  border-radius: 0 8px 8px 0;
+  padding-right: 1.5rem;
+}
+
+
+.badge-genre {
+  background-color: rgba(88, 166, 255, 0.15);
+  color: var(--primary-color);
+  padding: 0.4em 0.8em;
+  border-radius: 20px;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+/* Tombol Ikon */
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  transition: color 0.3s, transform 0.3s;
+}
+
+.btn-icon:hover {
+  color: var(--primary-color);
+  transform: scale(1.1);
+}
+
+.text-danger {
+  color: var(--accent-danger) !important;
+}
+
+/* Accordion Kustom */
+.accordion {
+  --bs-accordion-bg: transparent;
+  --bs-accordion-border-color: var(--border-color);
+  --bs-accordion-btn-color: var(--text-color);
+  --bs-accordion-active-color: var(--primary-color);
+  --bs-accordion-active-bg: rgba(88, 166, 255, 0.1);
+  --bs-accordion-btn-focus-box-shadow: none;
+}
+
+.accordion-item {
+  background-color: transparent !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.accordion-button {
+  font-weight: 500;
+}
+
+.accordion-body {
+  background-color: var(--bg-color);
+}
+
+.genre-song-card {
+  background-color: var(--card-bg);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.genre-song-card:hover {
+  border-left-color: var(--primary-color);
+  background-color: #30363d;
+}
+
+/* Tampilan State Kosong */
+.empty-state-card {
+  background-color: var(--card-bg);
+  padding: 3rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px dashed var(--border-color);
+}
+
+/* Kartu Hasil Rekomendasi */
+.result-card {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--border-color);
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.result-card.is-success {
+  border-color: var(--accent-success);
+}
+
+.result-card.is-warning {
+  border-color: var(--accent-warning);
+}
+
+.result-card .card-header {
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.result-card.is-success .card-header {
+  background-color: rgba(63, 185, 80, 0.1);
+  color: var(--accent-success);
+}
+
+.result-card.is-warning .card-header {
+  background-color: rgba(210, 153, 34, 0.1);
+  color: var(--accent-warning);
+}
+
+.result-card .card-body {
+  padding: 0.5rem;
+}
+
+.result-card .table-responsive {
+  max-height: 800px;
+}
+
+/* Select Form */
+.form-select {
+  background-color: var(--bg-color) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238B949E' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.25rem rgba(88, 166, 255, 0.25);
+}
+
+/* Scrollbar Kustom */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1b1d20;
+  background: var(--bg-color);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #444;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5c6ac4;
+  background: var(--primary-color);
 }
 </style>
